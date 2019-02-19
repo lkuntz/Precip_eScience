@@ -10,6 +10,7 @@ Provide one time `key_id` and `key_access` to be stored in the `home` folder as 
 ```
 import os
 from os.path import expanduser
+import json
 
 home = expanduser("~")
 # store one time credentials in the home directory

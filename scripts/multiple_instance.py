@@ -14,7 +14,7 @@ class Multi_instance(object):
         self.KEY = paramiko.RSAKey.from_private_key_file('winter19_incubator.pem')
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.AMI = ''
+        self.AMI = ""
         self.MIN_COUNT = 1
         self.MAX_COUNT = 1
         self.INSTANCE_TYPE = "c5.4xlarge"
@@ -22,8 +22,16 @@ class Multi_instance(object):
         self.KEY_NAME = 'winter19_incubator'
         self.TAG_NAME = {"Key": "Name", "Value": 'Shiv_Incubator19-{}'.format(year)}
         self.REGION = "us-west-2"
-        self.ACCESS_KEY = ""
-        self.SECRET_ACCESS_KEY = ""
+        self.CREDS_DATA = {}
+
+    def load_creds(self):
+        """
+            Utility function to read s3 credential file for
+            data upload to s3 bucket.
+        """
+        home = expanduser("~")
+        with open(os.path.join(home, 'creds_multi.json')) as creds_file:
+            self.CREDS_DATA = json.load(creds_file)
         
     def spin_instance(self):
         session = boto3.Session(aws_access_key_id=self.ACCESS_KEY,aws_secret_access_key=self.SECRET_ACCESS_KEY)
@@ -56,6 +64,7 @@ class Multi_instance(object):
         
 def _multiprocess_handler(year):
     batch_job = Multi_instance(int(year))
+    batch_job.load_creds()
     batch_job.spin_instance()
         
 if __name__ == '__main__':
