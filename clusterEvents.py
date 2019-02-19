@@ -207,7 +207,7 @@ def time_to_deltaTime(Time):
 def remove_dublicate(Data, Time, labels, month, year):
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
     time = pd.DatetimeIndex(Time)
-    index = np.argwhere((labels==-1) & (time.month>month))
+    index = np.argwhere((labels==-1) & (time.month!=month))
 
     Data = np.delete(Data,index,0)
     Time = np.delete(Time,index)
