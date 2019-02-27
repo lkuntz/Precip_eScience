@@ -25,6 +25,7 @@ Class `Multi_instance()` needs to be initialized with:
   
       1.) Providing AMI id to spin instances: self.AMI = ""
       2.) Providing Security group for the AMI to attach to : self.SECURITY_GROUP = ['']
+      3.) Providing .pem file for paramiko to do ssh : self.KEY = paramiko.RSAKey.from_private_key_file('sample.pem')
       
 ## Runtime
 
