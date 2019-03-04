@@ -7,7 +7,7 @@ import paramiko
 import sys
 import os
 from os.path import expanduser
-impot json
+import json
 
 
 class Multi_instance(object):
@@ -39,7 +39,7 @@ class Multi_instance(object):
             self.CREDS_DATA = json.load(creds_file)
         
     def spin_instance(self):
-        session = boto3.Session(aws_access_key_id=self.ACCESS_KEY,aws_secret_access_key=self.SECRET_ACCESS_KEY)
+        session = boto3.Session(aws_access_key_id=self.CREDS_DATA['key_id'],aws_secret_access_key=self.CREDS_DATA['key_access'])
         ec2 = session.resource('ec2',region_name=self.REGION)
         instances = ec2.create_instances(ImageId= self.AMI, MinCount= self.MIN_COUNT, MaxCount= self.MAX_COUNT,
                                          InstanceType= self.INSTANCE_TYPE, SecurityGroupIds=self.SECURITY_GROUP,
