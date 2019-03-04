@@ -13,9 +13,8 @@ import json
 class Multi_instance(object):
     def __init__(self,year):
         self.CMD_0 = "source /home/ubuntu/miniconda3/bin/activate precip_test"
-        self.CMD_1 = "cd /home/ubuntu/precip/Precip_eScience/"
-        self.CMD_2 = "wget -O clusterEvents.py https://raw.githubusercontent.com/lkuntz/Precip_eScience/master/clusterEvents.py"
-        self.CMD_3 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {}".format(year)
+        self.CMD_1 = "wget -O /home/ubuntu/precip/Precip_eScience/clusterEvents.py https://raw.githubusercontent.com/lkuntz/Precip_eScience/master/clusterEvents.py"
+        self.CMD_2 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {}".format(year)
         self.KEY = paramiko.RSAKey.from_private_key_file('winter19_incubator.pem')
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -52,7 +51,7 @@ class Multi_instance(object):
         print("The instance now has a status of 'ok'!")
         instance.load()
         self.client.connect(hostname=instance.public_dns_name, username="ubuntu", pkey=self.KEY)
-        cmd = [self.CMD_0, self.CMD_1, self.CMD_2, self.CMD_3]
+        cmd = [self.CMD_0, self.CMD_1, self.CMD_2]
         channel = self.client.invoke_shell()
         for command in cmd:
             stdin, stdout, stderr = self.client.exec_command(command)
