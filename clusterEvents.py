@@ -44,7 +44,7 @@ def save_s3_data(labels,eps,minSamples,Data,Time,filename):
     bucket = s3.Bucket('himatdata')
     home = os.getcwd()
     
-    bucket.upload_file(filename+"Clustered_Data.nc4",'Trmm/EPO/Cluster_results/'+filename+'_Clustered_Data.nc4')
+    bucket.upload_file(filename+"Clustered_Data.nc4",'Trmm/EPO/Cluster_results_March5/'+filename+'_Clustered_Data.nc4')
 
     os.remove(filename+"Clustered_Data.nc4")
 
@@ -511,7 +511,7 @@ def main_script(year, month):
     SR_minrate = 2 #only keep data with rainrate greater than this value
     opt_frac = .5 #fraction of data to use when determining the optimal dbscan parameters
     Rad_Earth = 6371 #km earth's radius
-    MesoScale = 300 #Mesoscale is up to a few hundred km'
+    MesoScale = 150 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
 #    Data, Time, A = load_s3_data(SR_minrate)
