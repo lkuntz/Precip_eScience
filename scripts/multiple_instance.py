@@ -44,27 +44,30 @@ class Multi_instance(object):
                                          InstanceType= self.INSTANCE_TYPE, SecurityGroupIds=self.SECURITY_GROUP,
                                          KeyName= self.KEY_NAME,
                                          TagSpecifications=[{'ResourceType': 'instance','Tags': [self.TAG_NAME]}])
-        instance = instances[0]
-        ec2_client = session.client('ec2',region_name=self.REGION)
-        waiter = ec2_client.get_waiter('instance_status_ok')
-        waiter.wait(InstanceIds=[instance.id])
-        print("The instance now has a status of 'ok'!")
-        instance.load()
-        self.client.connect(hostname=instance.public_dns_name, username="ubuntu", pkey=self.KEY)
-        cmd = [self.CMD_0, self.CMD_1, self.CMD_2]
-        channel = self.client.invoke_shell()
-        for command in cmd:
-            stdin, stdout, stderr = self.client.exec_command(command)
-            exit_status = stdout.channel.recv_exit_status()          # Blocking call
-            if exit_status == 0:
-               print ("Done Executing: ", command)
-            else:
-               print("Stdout output is: ", stdout.read())
-               print("Error occured is: ", stderr.read())
+        try:
+            instance = instances[0]
+            ec2_client = session.client('ec2',region_name=self.REGION)
+            waiter = ec2_client.get_waiter('instance_status_ok')
+            waiter.wait(InstanceIds=[instance.id])
+            print("The instance now has a status of 'ok'!")
+            instance.load()
+            self.client.connect(hostname=instance.public_dns_name, username="ubuntu", pkey=self.KEY)
+            cmd = [self.CMD_0, self.CMD_1, self.CMD_2]
+            channel = self.client.invoke_shell()
+            for command in cmd:
+                stdin, stdout, stderr = self.client.exec_command(command)
+                exit_status = stdout.channel.recv_exit_status()          # Blocking call
+                if exit_status == 0:
+                   print ("Done Executing: ", command)
+                else:
+                   print("Stdout output is: ", stdout.read())
+                   print("Error occured is: ", stderr.read())
 
-        print("Executed all of the commands. Now will exit \n")
-        self.client.close()
-        ec2.instances.filter(InstanceIds=[instance.id]).terminate()
+            print("Executed all of the commands. Now will exit \n")
+            self.client.close()
+            ec2.instances.filter(InstanceIds=[instance.id]).terminate()
+       except:
+            ec2.instances.filter(InstanceIds=[instance.id]).terminate()
         
 def _multiprocess_handler(year):
     batch_job = Multi_instance(int(year))
