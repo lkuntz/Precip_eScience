@@ -67,6 +67,7 @@ class Multi_instance(object):
             self.client.close()
             ec2.instances.filter(InstanceIds=[instance.id]).terminate()
        except:
+            instance = instances[0]
             ec2.instances.filter(InstanceIds=[instance.id]).terminate()
         
 def _multiprocess_handler(year):
