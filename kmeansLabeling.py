@@ -27,7 +27,7 @@ def load_Data():
 	bucket = s3.Bucket('himatdata')
 	home = os.getcwd()
 
-    bucket.download_file('Trmm/EPO/Cluster_results/DB_compiled_Clustered_Data.nc4',os.path.join(os.path.join(home,'S3_downloads/DB_compiled_Clustered_Data.nc4')))
+    bucket.download_file('Trmm/EPO/Cluster_results_March5/DB_compiled_Clustered_Data.nc4',os.path.join(os.path.join(home,'S3_downloads/DB_compiled_Clustered_Data.nc4')))
     F = xr.open_dataset('S3_downloads/DB_compiled_Clustered_Data.nc4')
 
     return F
@@ -87,7 +87,7 @@ def save_netCDF(F,klabels_originalData,CENTERS,klabels):
 	bucket = s3.Bucket('himatdata')
 	home = os.getcwd()
 
-	bucket.upload_file('DB_Kmeans_compiled_Clustered_Data.nc4','Trmm/EPO/Cluster_results/DB_compiled_Clustered_Data.nc4')
+	bucket.upload_file('DB_Kmeans_compiled_Clustered_Data.nc4','Trmm/EPO/Cluster_results_March5/DB_compiled_Clustered_Data.nc4')
 
 	#remove the local copy
 	os.remove('DB_Kmeans_compiled_Clustered_Data.nc4')

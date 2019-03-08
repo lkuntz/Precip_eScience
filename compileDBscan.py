@@ -95,7 +95,7 @@ def Download_DBscanOutput():
 	home = os.getcwd()
 
 	#for every netcdf file in the cluster results download it to the S3_Downloads folder
-	for obj in bucket.objects.filter(Delimiter='/', Prefix='Trmm/EPO/Cluster_results/' ):
+	for obj in bucket.objects.filter(Delimiter='/', Prefix='Trmm/EPO/Cluster_results_March5/' ):
         if obj.key[-4:] == ".nc4":
             print(obj.key)
             bucket.download_file(obj.key,os.path.join(os.path.join(home,'S3_downloads/',obj.key[-26:])))
@@ -156,7 +156,7 @@ def save_compiled_Data(Data,labels,Time,cluster_spans,cluster_means,cluster_coun
 	bucket = s3.Bucket('himatdata')
 	home = os.getcwd()
 
-	bucket.upload_file('DB_compiled_Clustered_Data.nc4','Trmm/EPO/Cluster_results/DB_compiled_Clustered_Data.nc4')
+	bucket.upload_file('DB_compiled_Clustered_Data.nc4','Trmm/EPO/Cluster_results_March5/DB_compiled_Clustered_Data.nc4')
 
 	os.remove('DB_compiled_Clustered_Data.nc4')
 
@@ -179,7 +179,7 @@ def save_kmeans_data(k_n_clusters, met):
 	bucket = s3.Bucket('himatdata')
 	home = os.getcwd()
 
-	bucket.upload_file('kmeans_output.nc4','Trmm/EPO/Cluster_results/kmeans_output.nc4')
+	bucket.upload_file('kmeans_output.nc4','Trmm/EPO/Cluster_results_March5/kmeans_output.nc4')
 
 	os.remove('kmeans_output.nc4')
 
