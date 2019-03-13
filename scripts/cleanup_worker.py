@@ -52,6 +52,3 @@ if __name__ == '__main__':
     instance_tag_name = cleanup_job.TAG_NAME['Value'].split(cleanup_job.TAG_DELIMITER)[0]
     logging.info("Tag being cleaned up is : %s", instance_tag_name)
     main(instance_tag_name, cleanup_job.REGION)
-
-
-
