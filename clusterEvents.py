@@ -22,17 +22,17 @@ logging.basicConfig(filename='trmm.log', level=logging.INFO)
 
 
 def extract_regionalData(year,month,region):
-	filename = str(year)+"_"+str(month).zfill(2)
-	count = 0
+    filename = str(year)+"_"+str(month).zfill(2)
+    count = 0
 
     #Load in data for that month
     for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
         logging.info("Downloaded file: %s", file)
         if count == 0:
-        	regionalXarray = xr.open_dataset(file)
-        	count += 1
+            regionalXarray = xr.open_dataset(file)
+            count += 1
         else:
-        	regionalXarray = regionalXarray.merge(xr.open_dataset(file))
+            regionalXarray = regionalXarray.merge(xr.open_dataset(file))
 
     return regionalXarray
 
@@ -74,51 +74,51 @@ def read_TRMM_data(year,month):
 
     #Load in data for that month for each region
     for region in regionNames:
-    	filename = str(year)+"_"+str(month).zfill(2)
-    	regionalArray = extract_regionalData(year,month,region)
-    	if count==0:
-    		globalArray = regionalArray
-    		count += 1
-    	else:
-    		globalArray = globalArray.merge(regionalArray)
+        filename = str(year)+"_"+str(month).zfill(2)
+        regionalArray = extract_regionalData(year,month,region)
+        if count==0:
+            globalArray = regionalArray
+            count += 1
+        else:
+            globalArray = globalArray.merge(regionalArray)
 
-	    #Load in previous day of data
-	    year_prev = year
-	    month_prev = month-1
-	    if month==1: 
-	        year_prev = year-1
-	        month_prev = 12
+        #Load in previous day of data
+        year_prev = year
+        month_prev = month-1
+        if month==1: 
+            year_prev = year-1
+            month_prev = 12
 
-	    if year_prev>1997:
-	        filename = str(year_prev)+"_"+str(month_prev).zfill(2)
-	        files = glob.glob("trmm/"+region+"/"+filename+"/*.nc4")
-	        days = [int(f[-17:-15]) for f in files]
-	        indices = np.argwhere(days>np.max(days)-1)
+        if year_prev>1997:
+            filename = str(year_prev)+"_"+str(month_prev).zfill(2)
+            files = glob.glob("trmm/"+region+"/"+filename+"/*.nc4")
+            days = [int(f[-17:-15]) for f in files]
+            indices = np.argwhere(days>np.max(days)-1)
 
-	        for i in range(len(indices)):
-	            file = files[int(indices[i])]
+            for i in range(len(indices)):
+                file = files[int(indices[i])]
 
-	            regionalArray = xr.open_dataset(file)
-	            globalArray = globalArray.merge(regionalArray)
+                regionalArray = xr.open_dataset(file)
+                globalArray = globalArray.merge(regionalArray)
 
-	    #Load in next day of data
-	    year_next = year
-	    month_next = month+1
-	    if month==12: 
-	        year_next = year+1
-	        month_next = 1
+        #Load in next day of data
+        year_next = year
+        month_next = month+1
+        if month==12: 
+            year_next = year+1
+            month_next = 1
 
-	    if year_next<2014:
-	        filename = str(year_next)+"_"+str(month_next).zfill(2)
-	        files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
-	        days = [int(f[-17:-15]) for f in files]
-	        indices = np.argwhere(days<np.min(days)+1)
+        if year_next<2014:
+            filename = str(year_next)+"_"+str(month_next).zfill(2)
+            files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
+            days = [int(f[-17:-15]) for f in files]
+            indices = np.argwhere(days<np.min(days)+1)
 
-	        for i in range(len(indices)):
-	            file = files[int(indices[i])]
+            for i in range(len(indices)):
+                file = files[int(indices[i])]
 
-	            regionalArray = xr.open_dataset(file)
-	            globalArray = globalArray.merge(regionalArray)
+                regionalArray = xr.open_dataset(file)
+                globalArray = globalArray.merge(regionalArray)
 
     return globalArray
     
@@ -139,40 +139,40 @@ def download_s3_data(year,month):
 
     #Load in data for that month for each region
     for region in regionNames:
-    	filename = str(year)+"_"+str(month).zfill(2)
+        filename = str(year)+"_"+str(month).zfill(2)
 
-    	for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
-        	if obj.key[-4:] == ".nc4":
+        for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+            if obj.key[-4:] == ".nc4":
 
-            	bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+                bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
 
         #download previous month of data
-	    year_prev = year
-	    month_prev = month-1
-	    if month==1: 
-	        year_prev = year-1
-	        month_prev = 12
+        year_prev = year
+        month_prev = month-1
+        if month==1: 
+            year_prev = year-1
+            month_prev = 12
 
-	    if year_prev>1997:
-	        filename = str(year_prev)+"_"+str(month_prev).zfill(2)
-	        for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
-	        	if obj.key[-4:] == ".nc4":
+        if year_prev>1997:
+            filename = str(year_prev)+"_"+str(month_prev).zfill(2)
+            for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+                if obj.key[-4:] == ".nc4":
 
-	            	bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+                    bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
 
-	    #download  next month of data
-	    year_next = year
-	    month_next = month+1
-	    if month==12: 
-	        year_next = year+1
-	        month_next = 1
+        #download  next month of data
+        year_next = year
+        month_next = month+1
+        if month==12: 
+            year_next = year+1
+            month_next = 1
 
-	    if year_next<2014:
-	        filename = str(year_next)+"_"+str(month_next).zfill(2)
-	        for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
-	        	if obj.key[-4:] == ".nc4":
+        if year_next<2014:
+            filename = str(year_next)+"_"+str(month_next).zfill(2)
+            for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+                if obj.key[-4:] == ".nc4":
 
-	            	bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+                    bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
     return
     
 #Translate the time into delta time since the first datapoint (in hours)
@@ -228,7 +228,7 @@ def data_to_cluster(globalArray):
     #Extract [Lat, Lon, DeltaTime]
 
     stackedArray = globalArray.stack(clusteredCoords=('latitude', 'longitude','time'))
-	stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+    stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
 
     Xdata = np.array([np.array(stackedArray.latitude),np.array(stackedArray.longitude),time_to_deltaTime(np.array(stackedArray.time))])
     Xdata = Xdata.T
