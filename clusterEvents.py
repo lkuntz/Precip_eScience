@@ -20,133 +20,33 @@ ROOT_DIR = '/home/ubuntu/precip/Precip_eScience/'
 os.chdir(ROOT_DIR)
 logging.basicConfig(filename='trmm.log', level=logging.INFO)
 
-def save_s3_data(labels,eps,minSamples,Data,Time,filename):
-    #package the matrices as a dataset to save as a netcdf
-    data_events = xr.Dataset(
-        data_vars = {'Data': (('time', 'vector'),Data), 
-                     'Labels': (('time'),labels)},
-        coords = {'time': Time,
-                  'vector': range(len(Data[0,:]))},
-        attrs = {'eps': eps,
-                'minimumSamples': minSamples})
 
-    #save as a netcdf
-    data_events.to_netcdf(path = filename+"Clustered_Data.nc4", compute = True)
-    
-    home = expanduser("~")
-
-    with open(os.path.join(home,'creds.json')) as creds_file:
-        creds_data = json.load(creds_file)
-
-    #Access from S3
-    s3 = boto3.resource('s3',aws_access_key_id=creds_data['key_id'],
-             aws_secret_access_key=creds_data['key_access'],region_name='us-west-2')
-    bucket = s3.Bucket('himatdata')
-    home = os.getcwd()
-    
-    bucket.upload_file(filename+"Clustered_Data.nc4",'Trmm/EPO/Cluster_results_March5/'+filename+'_Clustered_Data.nc4')
-
-    os.remove(filename+"Clustered_Data.nc4")
-
-#function that reads local data from TRMM in the EC2 instances
-def read_TRMM_data(year,month,SR_minrate):
-    #create empty matrices to hold the extracted data
-    Lat_Heat = []
-    surf_r = []
-    LAT = []
-    LON = []
-    TIME = []
-    count = 0
-    A = []
-    logging.info("in read TRMM")
-    filename = str(year)+"_"+str(month).zfill(2)
+def extract_regionalData(year,month,region):
+	filename = str(year)+"_"+str(month).zfill(2)
+	count = 0
 
     #Load in data for that month
-    for file in glob.glob("data/Trmm/EPO/"+filename+"/*.nc4"):
+    for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
         logging.info("Downloaded file: %s", file)
-
-        L, S, A, la, lo, Ti = extract_data(xr.open_dataset(file),SR_minrate)
-        #append the new data in the matrices
-        if count==0:
-            Lat_Heat = L
-            LAT = la
-            LON = lo
-            TIME = Ti
-            count += 1
+        if count == 0:
+        	regionalXarray = xr.open_dataset(file)
+        	count += 1
         else:
-            Lat_Heat = np.concatenate((Lat_Heat,L),axis =0)
-            LAT = np.concatenate((LAT,la),axis =0)
-            LON = np.concatenate((LON,lo),axis =0)
-            TIME = np.concatenate((TIME,Ti),axis =0)
-        surf_r = np.append(surf_r,S)
+        	regionalXarray = regionalXarray.merge(xr.open_dataset(file))
 
-    #Load in previous 5 days of data
-    year_prev = year
-    month_prev = month-1
-    if month==1: 
-        year_prev = year-1
-        month_prev = 12
+    return regionalXarray
 
-    if year_prev>1997:
-        filename = str(year_prev)+"_"+str(month_prev).zfill(2)
-        files = glob.glob("data/Trmm/EPO/"+filename+"/*.nc4")
-        days = [int(f[-17:-15]) for f in files]
-        indices = np.argwhere(days>np.max(days)-5)
 
-        for i in range(len(indices)):
-            file = files[int(indices[i])]
+def save_s3_data(labels,eps,globalArray,filename):
+    #package the matrices as a dataset to save as a netcdf
+    labelsArray = xr.Dataset(
+        data_vars = {'Labels': (('clusteredCoords'),labels)},
+        coords = {'clusteredCoords': globalArray.clusteredCoords})
 
-            L, S, A, la, lo, Ti = extract_data(xr.open_dataset(file),SR_minrate)
-            #append the new data in the matrices
-            Lat_Heat = np.concatenate((Lat_Heat,L),axis =0)
-            LAT = np.concatenate((LAT,la),axis =0)
-            LON = np.concatenate((LON,lo),axis =0)
-            TIME = np.concatenate((TIME,Ti),axis =0)
-            surf_r = np.append(surf_r,S)
+    globalArray = globalArray.merge(labelsArray)
 
-    #Load in next 5 days of data
-    year_next = year
-    month_next = month+1
-    if month==12: 
-        year_next = year+1
-        month_next = 1
-
-    if year_next<2014:
-        filename = str(year_next)+"_"+str(month_next).zfill(2)
-        files = glob.glob("data/Trmm/EPO/"+filename+"/*.nc4")
-        days = [int(f[-17:-15]) for f in files]
-        indices = np.argwhere(days<np.min(days)+5)
-
-        for i in range(len(indices)):
-            file = files[int(indices[i])]
-
-            L, S, A, la, lo, Ti = extract_data(xr.open_dataset(file),SR_minrate)
-            #append the new data in the matrices
-            Lat_Heat = np.concatenate((Lat_Heat,L),axis =0)
-            LAT = np.concatenate((LAT,la),axis =0)
-            LON = np.concatenate((LON,lo),axis =0)
-            TIME = np.concatenate((TIME,Ti),axis =0)
-            surf_r = np.append(surf_r,S)
-
-    #Put all the data into one array, where rows are individual observations and the columns are 
-    #[Latitude, Longitude, Surface Rain, Latent Heat Profile]
-    Data = np.concatenate((LAT.reshape(len(LAT),1),LON.reshape(len(LON),1),surf_r.reshape(len(surf_r),1),Lat_Heat),axis=1)
-    Data = np.squeeze(Data)
-
-    #Remove repeated values
-    uniqueData, indices = np.unique(Data,axis=0,return_index=True)
-
-    return uniqueData, TIME[indices], A
-    
-#function that connects to the S3 bucket, downloads the file, reads in the data, and deletes the file
-def load_s3_data(SR_minrate):
-    #create empty matrices to hold the extracted data
-    Lat_Heat = []
-    surf_r = []
-    LAT = []
-    LON = []
-    TIME = []
-    count = 0
+    #save as a netcdf
+    globalArray.to_netcdf(path = filename+"Clustered_Data_Globe" + eps + ".nc4", compute = True)
     
     home = expanduser("~")
 
@@ -156,43 +56,124 @@ def load_s3_data(SR_minrate):
     #Access from S3
     s3 = boto3.resource('s3',aws_access_key_id=creds_data['key_id'],
              aws_secret_access_key=creds_data['key_access'],region_name='us-west-2')
-    bucket = s3.Bucket('himatdata')
+    bucket = s3.Bucket('trmm')
+    home = os.getcwd()
+    
+    bucket.upload_file(filename+"Clustered_Data_Globe" + eps + ".nc4",'trmm/'+filename+"Clustered_Data_Globe" + eps + ".nc4")
+
+    os.remove(filename+"Clustered_Data_Globe" + eps + ".nc4")
+
+#function that reads local data from TRMM in the EC2 instances
+def read_TRMM_data(year,month):
+    #create empty matrices to hold the extracted data
+    
+    count = 0
+    logging.info("in read TRMM")
+
+    regionNames = ['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
+
+    #Load in data for that month for each region
+    for region in regionNames:
+    	filename = str(year)+"_"+str(month).zfill(2)
+    	regionalArray = extract_regionalData(year,month,region)
+    	if count==0:
+    		globalArray = regionalArray
+    		count += 1
+    	else:
+    		globalArray = globalArray.merge(regionalArray)
+
+	    #Load in previous day of data
+	    year_prev = year
+	    month_prev = month-1
+	    if month==1: 
+	        year_prev = year-1
+	        month_prev = 12
+
+	    if year_prev>1997:
+	        filename = str(year_prev)+"_"+str(month_prev).zfill(2)
+	        files = glob.glob("trmm/"+region+"/"+filename+"/*.nc4")
+	        days = [int(f[-17:-15]) for f in files]
+	        indices = np.argwhere(days>np.max(days)-1)
+
+	        for i in range(len(indices)):
+	            file = files[int(indices[i])]
+
+	            regionalArray = xr.open_dataset(file)
+	            globalArray = globalArray.merge(regionalArray)
+
+	    #Load in next day of data
+	    year_next = year
+	    month_next = month+1
+	    if month==12: 
+	        year_next = year+1
+	        month_next = 1
+
+	    if year_next<2014:
+	        filename = str(year_next)+"_"+str(month_next).zfill(2)
+	        files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
+	        days = [int(f[-17:-15]) for f in files]
+	        indices = np.argwhere(days<np.min(days)+1)
+
+	        for i in range(len(indices)):
+	            file = files[int(indices[i])]
+
+	            regionalArray = xr.open_dataset(file)
+	            globalArray = globalArray.merge(regionalArray)
+
+    return globalArray
+    
+#function that connects to the S3 bucket, downloads the file, reads in the data, and deletes the file
+def download_s3_data(year,month):
+    regionNames = ['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
+    
+    home = expanduser("~")
+
+    with open(os.path.join(home,'creds.json')) as creds_file:
+        creds_data = json.load(creds_file)
+
+    #Access from S3
+    s3 = boto3.resource('s3',aws_access_key_id=creds_data['key_id'],
+             aws_secret_access_key=creds_data['key_access'],region_name='us-west-2')
+    bucket = s3.Bucket('trmm')
     home = os.getcwd()
 
-    for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/EPO/2000_01/'):
-        if obj.key[-4:] == ".nc4":
+    #Load in data for that month for each region
+    for region in regionNames:
+    	filename = str(year)+"_"+str(month).zfill(2)
 
-            bucket.download_file(obj.key,os.path.join(os.path.join(home,'S3_downloads/',obj.key[17:])))
+    	for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+        	if obj.key[-4:] == ".nc4":
 
-        #file = 'oneProfile/TPR7_uw1_00538.19980101.000558_EPO.nc4'
-            L, S, A, la, lo, Ti = extract_data(xr.open_dataset(os.path.join(home,'S3_downloads/',obj.key[17:])),SR_minrate)
-           #append the new data in the matrices
-            if count==0:
-                Lat_Heat = L
-                LAT = la
-                LON = lo
-                TIME = Ti
-                count += 1
-            else:
-                Lat_Heat = np.concatenate((Lat_Heat,L),axis =0)
-                LAT = np.concatenate((LAT,la),axis =0)
-                LON = np.concatenate((LON,lo),axis =0)
-                TIME = np.concatenate((TIME,Ti),axis =0)
-            surf_r = np.append(surf_r,S)
-             
-            #delete the local file
-            os.remove(os.path.join(home,'S3_downloads/',obj.key[17:]))
-        
+            	bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
 
-    #Put all the data into one array, where rows are individual observations and the columns are 
-    #[Latitude, Longitude, Surface Rain, Latent Heat Profile]
-    Data = np.concatenate((LAT.reshape(len(LAT),1),LON.reshape(len(LON),1),surf_r.reshape(len(surf_r),1),Lat_Heat),axis=1)
-    Data = np.squeeze(Data)
-    
-    #Remove repeated values
-    uniqueData = np.unique(Data,axis=0)
-    
-    return uniqueData, TIME, A
+        #download previous month of data
+	    year_prev = year
+	    month_prev = month-1
+	    if month==1: 
+	        year_prev = year-1
+	        month_prev = 12
+
+	    if year_prev>1997:
+	        filename = str(year_prev)+"_"+str(month_prev).zfill(2)
+	        for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+	        	if obj.key[-4:] == ".nc4":
+
+	            	bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+
+	    #download  next month of data
+	    year_next = year
+	    month_next = month+1
+	    if month==12: 
+	        year_next = year+1
+	        month_next = 1
+
+	    if year_next<2014:
+	        filename = str(year_next)+"_"+str(month_next).zfill(2)
+	        for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+	        	if obj.key[-4:] == ".nc4":
+
+	            	bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+    return
     
 #Translate the time into delta time since the first datapoint (in hours)
 def time_to_deltaTime(Time):
@@ -243,11 +224,15 @@ def remove_dublicate(Data, Time, labels, month, year):
 
     return Data, Time, labels
 #Create array to Cluster the rainfall events, Scale the grid lat/lon so it is weighted 'fairly' compared to time
-def data_to_cluster(Data):
+def data_to_cluster(globalArray):
     #Extract [Lat, Lon, DeltaTime]
-    Xdata = np.vstack((Data[:,1],Data[:,2],Data[:,0]))
+
+    stackedArray = globalArray.stack(clusteredCoords=('latitude', 'longitude','time'))
+	stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+
+    Xdata = np.array([np.array(stackedArray.latitude),np.array(stackedArray.longitude),time_to_deltaTime(np.array(stackedArray.time))])
     Xdata = Xdata.T
-    return Xdata
+    return Xdata, stackedArray
 
 def cluster_and_label_data(Distance,eps,min_samps):
     model = DBSCAN(eps=eps, min_samples=min_samps,metric=distance_sphere_and_time)
@@ -403,55 +388,6 @@ def optimize_dbscan(data,metric='silhouette'):
 #throws out profiles with missing information or minimal rainfall. It returns the variables I care about that pass these
 #checks
 
-def extract_data(file, SR_min=5):
-    #Extract the data you want from file
-    altitude_lh = file.altitude_lh.data
-    surf_rain = file.surf_rain.data
-    latent_heating = file.latent_heating.data
-
-    lat = file.latitude.data
-    lon = file.longitude.data
-    time = file.time.data
-    
-    #create grid of altitude, lat, and lon coordinates
-    LON, LAT = np.meshgrid(lon, lat)
-
-    #size of lat and lon as variables
-    nlat = len(lat)
-    nlon = len(lon)
-    nalt = len(altitude_lh)
-
-    #reshape as column vector (note the indicing is now column*ncolumns+row)
-    surf_rain = np.reshape(surf_rain,[nlat*nlon])
-    LH = np.reshape(latent_heating,[nalt,nlat*nlon])
-    LON = np.reshape(LON,[nlat*nlon])
-    LAT = np.reshape(LAT,[nlat*nlon])
-
-    #Remove values with NaN and rainfall less than cut-off
-    surf_R = surf_rain[~np.isnan(surf_rain)]
-    surf_r = surf_R[surf_R>=SR_min]
-
-    Lat_Heat = LH[:,~np.isnan(surf_rain)]
-    Lat_Heat = Lat_Heat[:,surf_R>=SR_min]
-    Lat_Heat = np.squeeze(Lat_Heat)
-
-    LAT = LAT[~np.isnan(surf_rain)]
-    LAT = LAT[surf_R>=SR_min]
-    LAT = np.squeeze(LAT)
-
-    LON = LON[~np.isnan(surf_rain)]
-    LON = LON[surf_R>=SR_min]
-    LON = np.squeeze(LON)
-
-    #Remove any profiles where there is missing latent heat info
-    surf_r = surf_r[~pd.isnull(Lat_Heat).any(axis=0)]
-    LAT = LAT[~pd.isnull(Lat_Heat).any(axis=0)]
-    LON = LON[~pd.isnull(Lat_Heat).any(axis=0)]
-    Lat_Heat = Lat_Heat[:,~pd.isnull(Lat_Heat).any(axis=0)]
-    Time = np.repeat(time,len(surf_r))
-    
-    return Lat_Heat.T, surf_r.T, altitude_lh, LAT.T, LON.T, Time.T
-
 #calcuate the distance (in degrees) between 2 points in lat/long
 def lat_long_to_arc(lat1,long1,lat2,long2):
     # Convert latitude and longitude to
@@ -514,28 +450,18 @@ def main_script(year, month):
     MesoScale = 150 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
-#    Data, Time, A = load_s3_data(SR_minrate)
-    Data, Time, A = read_TRMM_data(year,month,SR_minrate)
-    DeltaTime = time_to_deltaTime(Time)
+    download_s3_data(year,month)
+    globalArray = read_TRMM_data(year,month)
     
-    Data = np.concatenate((DeltaTime.reshape(len(DeltaTime),1), Data), axis=1)
-    Data = np.squeeze(Data)
-    
-    DatatoCluster = data_to_cluster(Data)
-    
-    logging.info("Determining parameters")
-
-    # eps, min_samples = optimal_params(Data[0:int(len(DatatoCluster)*opt_frac),:])
-    
+    DatatoCluster, globalArray = data_to_cluster(globalArray)
+        
     eps = MesoScale 
-    min_samples = 21
+    min_samples = 1
     
     labels = cluster_and_label_data(DatatoCluster,eps,min_samples)
     logging.info("Fit the Data!")
     
-    Data, Time, labels = remove_dublicate(Data, Time, labels, month, year)
-
-    save_s3_data(labels,eps,min_samples,Data,Time,filename)
+    save_s3_data(labels,eps,min_samples,globalArray,filename)
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -543,8 +469,9 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--year')
     args = parser.parse_args()
     year = int(args.year)
-    for month in range(1,13):
-        logging.info("In Month: %s", (month))
-        main_script(year,month)
+    month = 7
+    # for month in range(1,13):
+    logging.info("In Month: %s", (month))
+    main_script(year,month)
     print("Done")
     print("--- %s seconds ---" % (time.time() - start_time))
