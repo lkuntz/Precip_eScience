@@ -1,4 +1,4 @@
-#import the different packages used throughout
+#import the different packages used throughoue#import the different packages used throughout
 #from mpl_toolkits.basemap import Basemap
 import xarray as xr
 import numpy as np
@@ -67,20 +67,15 @@ def save_s3_data(labels,eps,globalArray,filename):
 def read_TRMM_data(year,month):
     #create empty matrices to hold the extracted data
     
-    count = 0
     logging.info("in read TRMM")
-
+    globalArray = []
     regionNames = ['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
 
     #Load in data for that month for each region
     for region in regionNames:
         filename = str(year)+"_"+str(month).zfill(2)
         regionalArray = extract_regionalData(year,month,region)
-        if count==0:
-            globalArray = regionalArray
-            count += 1
-        else:
-            globalArray = globalArray.merge(regionalArray)
+        globalArray.append(regionalArray)
 
         #Load in previous day of data
         year_prev = year
@@ -99,7 +94,7 @@ def read_TRMM_data(year,month):
                 file = files[int(indices[i])]
 
                 regionalArray = xr.open_dataset(file)
-                globalArray = globalArray.merge(regionalArray)
+                globalArray.append(regionalArray)
 
         #Load in next day of data
         year_next = year
@@ -118,7 +113,9 @@ def read_TRMM_data(year,month):
                 file = files[int(indices[i])]
 
                 regionalArray = xr.open_dataset(file)
-                globalArray = globalArray.merge(regionalArray)
+                globalArray.append(regionalArray)
+
+    globalArray = xr.merge(globalArray)
 
     return globalArray
     
@@ -140,11 +137,13 @@ def download_s3_data(year,month):
     #Load in data for that month for each region
     for region in regionNames:
         filename = str(year)+"_"+str(month).zfill(2)
-
-        for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+        logging.info(filename + " " + region)
+        if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
+            os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
+        for obj in bucket.objects.filter(Delimiter='', Prefix= region+'/'+filename+'/'):
             if obj.key[-4:] == ".nc4":
-
-                bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+                logging.info(obj.key)
+                bucket.download_file(obj.key,os.path.join(home,'data/Trmm/'+obj.key))
 
         #download previous month of data
         year_prev = year
@@ -155,7 +154,9 @@ def download_s3_data(year,month):
 
         if year_prev>1997:
             filename = str(year_prev)+"_"+str(month_prev).zfill(2)
-            for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+            if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
+                os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
+            for obj in bucket.objects.filter(Delimiter='', Prefix=region+'/'+filename+'/'):
                 if obj.key[-4:] == ".nc4":
 
                     bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
@@ -169,7 +170,9 @@ def download_s3_data(year,month):
 
         if year_next<2014:
             filename = str(year_next)+"_"+str(month_next).zfill(2)
-            for obj in bucket.objects.filter(Delimiter='', Prefix='Trmm/'+region+'/'+filename+'/'):
+            if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
+                os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
+            for obj in bucket.objects.filter(Delimiter='', Prefix=region+'/'+filename+'/'):
                 if obj.key[-4:] == ".nc4":
 
                     bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
