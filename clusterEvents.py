@@ -24,15 +24,15 @@ logging.basicConfig(filename='trmm.log', level=logging.INFO)
 def extract_regionalData(year,month,region):
     filename = str(year)+"_"+str(month).zfill(2)
     count = 0
+    regionalXarray = []
 
     #Load in data for that month
     for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
         logging.info("Downloaded file: %s", file)
-        if count == 0:
-            regionalXarray = xr.open_dataset(file)
-            count += 1
-        else:
-            regionalXarray = regionalXarray.merge(xr.open_dataset(file))
+        singleXarray = xr.open_dataset(file)
+        stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+        stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+        regionalXarray = regionalXarray.append(stackedArray)
 
     return regionalXarray
 
@@ -93,8 +93,10 @@ def read_TRMM_data(year,month):
             for i in range(len(indices)):
                 file = files[int(indices[i])]
 
-                regionalArray = xr.open_dataset(file)
-                globalArray.append(regionalArray)
+                singleXarray = xr.open_dataset(file)
+                stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+                stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+                globalArray.append(stackedArray)
 
         #Load in next day of data
         year_next = year
@@ -112,8 +114,10 @@ def read_TRMM_data(year,month):
             for i in range(len(indices)):
                 file = files[int(indices[i])]
 
-                regionalArray = xr.open_dataset(file)
-                globalArray.append(regionalArray)
+                singleXarray = xr.open_dataset(file)
+                stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+                stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+                globalArray.append(stackedArray)
 
     globalArray = xr.merge(globalArray)
 
@@ -213,7 +217,7 @@ def remove_dublicate(Data, Time, labels, month, year):
             time = time[labels!=i]
             labels = labels[labels!=i]
         #remove clusters who end in the last day of the next month (captured in the next month)
-        elif np.max(tcluster).month==nmonth & np.max(tcluster).day>4:
+        elif np.max(tcluster).month==nmonth & np.max(tcluster).day>1:
             Data = Data[labels!=i,:]
             Time = Time[labels!=i]
             time = time[labels!=i]
@@ -230,12 +234,10 @@ def remove_dublicate(Data, Time, labels, month, year):
 def data_to_cluster(globalArray):
     #Extract [Lat, Lon, DeltaTime]
 
-    stackedArray = globalArray.stack(clusteredCoords=('latitude', 'longitude','time'))
-    stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
-
     Xdata = np.array([np.array(stackedArray.latitude),np.array(stackedArray.longitude),time_to_deltaTime(np.array(stackedArray.time))])
     Xdata = Xdata.T
-    return Xdata, stackedArray
+
+    return Xdata
 
 def cluster_and_label_data(Distance,eps,min_samps):
     model = DBSCAN(eps=eps, min_samples=min_samps,metric=distance_sphere_and_time)
@@ -453,10 +455,10 @@ def main_script(year, month):
     MesoScale = 150 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
-    download_s3_data(year,month)
+    # download_s3_data(year,month)
     globalArray = read_TRMM_data(year,month)
     
-    DatatoCluster, globalArray = data_to_cluster(globalArray)
+    DatatoCluster = data_to_cluster(globalArray)
         
     eps = MesoScale 
     min_samples = 1
