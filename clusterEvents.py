@@ -23,16 +23,16 @@ logging.basicConfig(filename='trmm.log', level=logging.INFO)
 
 def extract_regionalData(year,month,region):
     filename = str(year)+"_"+str(month).zfill(2)
-    count = 0
     regionalXarray = []
 
     #Load in data for that month
     for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
         logging.info("Downloaded file: %s", file)
         singleXarray = xr.open_dataset(file)
+        singleXarray = singleXarray.drop('swath')
         stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-        stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
-        regionalXarray = regionalXarray.append(stackedArray)
+        stackedArray.where(stackedArray.surf_rain>.4,drop=True)
+        regionalXarray.append(stackedArray)
 
     return regionalXarray
 
@@ -69,7 +69,7 @@ def read_TRMM_data(year,month):
     
     logging.info("in read TRMM")
     globalArray = []
-    regionNames = ['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
+    regionNames = ['H07']#['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
 
     #Load in data for that month for each region
     for region in regionNames:
@@ -86,7 +86,7 @@ def read_TRMM_data(year,month):
 
         if year_prev>1997:
             filename = str(year_prev)+"_"+str(month_prev).zfill(2)
-            files = glob.glob("trmm/"+region+"/"+filename+"/*.nc4")
+            files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
             indices = np.argwhere(days>np.max(days)-1)
 
@@ -95,7 +95,7 @@ def read_TRMM_data(year,month):
 
                 singleXarray = xr.open_dataset(file)
                 stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-                stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+                stackedArray.where(stackedArray.surf_rain>.4,drop=True)
                 globalArray.append(stackedArray)
 
         #Load in next day of data
@@ -115,11 +115,12 @@ def read_TRMM_data(year,month):
                 file = files[int(indices[i])]
 
                 singleXarray = xr.open_dataset(file)
+                singleXarray = singleXarray.drop('swath')
                 stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-                stackedArray.where(stackedArray.surf_rain>0.4,drop=True)
+                stackedArray.where(stackedArray.surf_rain>.4,drop=True)
                 globalArray.append(stackedArray)
 
-    globalArray = xr.merge(globalArray)
+    globalArray = xr.auto_combine(globalArray,concat_dim='clusteredCoords')
 
     return globalArray
     
@@ -231,7 +232,7 @@ def remove_dublicate(Data, Time, labels, month, year):
 
     return Data, Time, labels
 #Create array to Cluster the rainfall events, Scale the grid lat/lon so it is weighted 'fairly' compared to time
-def data_to_cluster(globalArray):
+def data_to_cluster(stackedArray):
     #Extract [Lat, Lon, DeltaTime]
 
     Xdata = np.array([np.array(stackedArray.latitude),np.array(stackedArray.longitude),time_to_deltaTime(np.array(stackedArray.time))])
