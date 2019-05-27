@@ -30,7 +30,8 @@ def extract_regionalData(year,month,region):
         logging.info("Downloaded file: %s", file)
         singleXarray = xr.open_dataset(file)
         singleXarray = singleXarray.drop('swath')
-        stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+        stackedArray = singleXarray
+        #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
         stackedArray.where(stackedArray.surf_rain>.4,drop=True)
         regionalXarray.append(stackedArray)
 
@@ -94,7 +95,9 @@ def read_TRMM_data(year,month):
                 file = files[int(indices[i])]
 
                 singleXarray = xr.open_dataset(file)
-                stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+                singleXarray = singleXarray.drop('swath')
+                stackedArray = singleXarray
+                #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
                 stackedArray.where(stackedArray.surf_rain>.4,drop=True)
                 globalArray.append(stackedArray)
 
@@ -116,11 +119,14 @@ def read_TRMM_data(year,month):
 
                 singleXarray = xr.open_dataset(file)
                 singleXarray = singleXarray.drop('swath')
-                stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+                stackedArray = singleXarray
+                #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
                 stackedArray.where(stackedArray.surf_rain>.4,drop=True)
                 globalArray.append(stackedArray)
 
-    globalArray = xr.auto_combine(globalArray,concat_dim='clusteredCoords')
+    globalArray = xr.concat([d.stack(z=['altitude','altitude_lh','latitude','longitude','time']) for d in globalArray[0]],'z').unstack('z')
+    globalArray = globalArray.stack(clusteredCoords=('latitude', 'longitude','time'))
+    #globalArray = xr.auto_combine(globalArray,concat_dim='clusteredCoords')
 
     return globalArray
     
