@@ -25,15 +25,18 @@ def extract_regionalData(year,month,region):
     filename = str(year)+"_"+str(month).zfill(2)
     regionalXarray = []
 
-    #Load in data for that month
-    for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
-        logging.info("Downloaded file: %s", file)
-        singleXarray = xr.open_dataset(file)
-        singleXarray = singleXarray.drop('swath')
-        stackedArray = singleXarray
-        #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-        stackedArray.where(stackedArray.surf_rain>.4,drop=True)
-        regionalXarray.append(stackedArray)
+    regionalXarray = xr.open_mfdataset("data/Trmm/"+region+'/'+filename+"/*.nc4")
+    regionalXarray.drop('swath')
+    regionalXarray.where(regionalXarray.surf_rain>.4,drop=True)
+    # #Load in data for that month
+    # for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
+    #     logging.info("Downloaded file: %s", file)
+    #     singleXarray = xr.open_dataset(file)
+    #     singleXarray = singleXarray.drop('swath')
+    #     stackedArray = singleXarray
+    #     #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+    #     stackedArray.where(stackedArray.surf_rain>.4,drop=True)
+    #     regionalXarray.append(stackedArray)
 
     return regionalXarray
 
@@ -90,16 +93,20 @@ def read_TRMM_data(year,month):
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
             indices = np.argwhere(days>np.max(days)-1)
+            regionalXarray = xr.open_mfdataset(files[indices])
+            regionalXarray.drop('swath')
+            regionalXarray.where(regionalXarray.surf_rain>.4,drop=True)
+            globalArray.append(regionalXarray)
 
-            for i in range(len(indices)):
-                file = files[int(indices[i])]
+            # for i in range(len(indices)):
+            #     file = files[int(indices[i])]
 
-                singleXarray = xr.open_dataset(file)
-                singleXarray = singleXarray.drop('swath')
-                stackedArray = singleXarray
-                #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-                stackedArray.where(stackedArray.surf_rain>.4,drop=True)
-                globalArray.append(stackedArray)
+            #     singleXarray = xr.open_dataset(file)
+            #     singleXarray = singleXarray.drop('swath')
+            #     stackedArray = singleXarray
+            #     #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+            #     stackedArray.where(stackedArray.surf_rain>.4,drop=True)
+            #     globalArray.append(stackedArray)
 
         #Load in next day of data
         year_next = year
@@ -113,20 +120,44 @@ def read_TRMM_data(year,month):
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
             indices = np.argwhere(days<np.min(days)+1)
+            regionalXarray = xr.open_mfdataset(files[indices])
+            regionalXarray.drop('swath')
+            regionalXarray.where(regionalXarray.surf_rain>.4,drop=True)
+            globalArray.append(regionalXarray)
 
-            for i in range(len(indices)):
-                file = files[int(indices[i])]
+            # for i in range(len(indices)):
+            #     file = files[int(indices[i])]
 
-                singleXarray = xr.open_dataset(file)
-                singleXarray = singleXarray.drop('swath')
-                stackedArray = singleXarray
-                #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-                stackedArray.where(stackedArray.surf_rain>.4,drop=True)
-                globalArray.append(stackedArray)
-
+            #     singleXarray = xr.open_dataset(file)
+            #     singleXarray = singleXarray.drop('swath')
+            #     stackedArray = singleXarray
+            #     #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+            #     stackedArray.where(stackedArray.surf_rain>.4,drop=True)
+            #     globalArray.append(stackedArray)
+    logging.info('about to combine arrays')
     globalArray = xr.concat([d.stack(z=['altitude','altitude_lh','latitude','longitude','time']) for d in globalArray[0]],'z').unstack('z')
     globalArray = globalArray.stack(clusteredCoords=('latitude', 'longitude','time'))
+    logging.info('successful combo of arrays')
+    #save as a netcdf
+    globalArray.to_netcdf(path = filename+"Clustered_Data_Globe_test_AllTRMMData.nc4", compute = True)
+    
+    home = expanduser("~")
+
+    with open(os.path.join(home,'creds.json')) as creds_file:
+        creds_data = json.load(creds_file)
+
+    #Access from S3
+    s3 = boto3.resource('s3',aws_access_key_id=creds_data['key_id'],
+             aws_secret_access_key=creds_data['key_access'],region_name='us-west-2')
+    bucket = s3.Bucket('trmm')
+    home = os.getcwd()
+    
+    bucket.upload_file(filename+"Clustered_Data_Globe_test_AllTRMMData.nc4",'trmm/'+filename+"Clustered_Data_Globe_test_AllTRMMData.nc4")
+
+    os.remove(filename+"Clustered_Data_Globe_test_AllTRMMData.nc4")
     #globalArray = xr.auto_combine(globalArray,concat_dim='clusteredCoords')
+    globalArray.drop('corr_Zfactor')
+    globalArray.drop('rain_type_original')
 
     return globalArray
     
@@ -464,9 +495,9 @@ def main_script(year, month):
     filename = str(year)+"_"+str(month).zfill(2)
     # download_s3_data(year,month)
     globalArray = read_TRMM_data(year,month)
-    
+    logging.info('process clustering metrics')
     DatatoCluster = data_to_cluster(globalArray)
-        
+    logging.info('about to cluster data')
     eps = MesoScale 
     min_samples = 1
     
