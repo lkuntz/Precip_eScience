@@ -125,7 +125,8 @@ def read_TRMM_data(year,month):
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
             indices = np.argwhere(days>np.max(days)-1)
-            files = files[indices]
+            logging.info(indices)
+            files = files[np.array(indices).astype(int)]
 
             try:
                 regionalXarray = xr.open_dataset(File) 
@@ -184,8 +185,8 @@ def read_TRMM_data(year,month):
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
             indices = np.argwhere(days<np.min(days)+1)
-            
-            files = files[indices]
+            logging.info(indices)
+            files = files[indices.astype(int)]
 
             SURF_RAIN = np.empty((0))
             Latent_Heating = np.empty((0,19))
