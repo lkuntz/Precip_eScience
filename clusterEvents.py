@@ -42,9 +42,9 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
             Time = Time.flatten()
 
             keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-            SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
             Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
-
+            
+            SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
             LAT = np.append(LAT,Lat[keep_indices])
             LONG = np.append(LONG,Long[keep_indices])
             TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
@@ -137,9 +137,9 @@ def read_TRMM_data(year,month):
                 Time = Time.flatten()
 
                 keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-                SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
+                
                 Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
-
+                SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
                 LAT = np.append(LAT,Lat[keep_indices])
                 LONG = np.append(LONG,Long[keep_indices])
                 TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
@@ -208,9 +208,9 @@ def read_TRMM_data(year,month):
                     Time = Time.flatten()
 
                     keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-                    SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
+                    
                     Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
-
+                    SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
                     LAT = np.append(LAT,Lat[keep_indices])
                     LONG = np.append(LONG,Long[keep_indices])
                     TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
