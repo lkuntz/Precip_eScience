@@ -27,9 +27,12 @@ def extract_regionalData(year,month,region):
 
     regionalXarray = xr.open_mfdataset("data/Trmm/"+region+'/'+filename+"/*.nc4",concat_dim='time')
     logging.info(regionalXarray)
-    regionalXarray.drop('swath')
+    regionalXarray = regionalXarray.drop('swath')
     logging.info('dropped swath') 
-    logging.info(regionalXarray.where(regionalXarray.surf_rain>.4))
+    regionalXarray = regionalXarray.drop('corr_Zfactor')
+    logging.info(regionalXarray)
+    regionalXarray = regionalXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
+    logging.info('stacked')
     regionalXarray = regionalXarray.where(regionalXarray.surf_rain>.4,drop=True)
     # #Load in data for that month
     # for file in glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4"):
