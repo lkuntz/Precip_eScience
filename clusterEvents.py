@@ -23,13 +23,14 @@ logging.basicConfig(filename='trmm.log', level=logging.INFO)
 
 def extract_regionalData(year,month,region):
     filename = str(year)+"_"+str(month).zfill(2)
-    regionalXarray = []
 
     regionalXarray = xr.open_mfdataset("data/Trmm/"+region+'/'+filename+"/*.nc4",concat_dim='time')
-    
+    logging.info(regionalXarray.surf_rain.values)    
     Surf_Rain = regionalXarray.surf_rain.values.flatten()
+    logging.info('flattened')
     keep_indices = np.where(Surf_Rain>.4)
     Surf_Rain = Surf_Rain[keep_indices]
+    logging.info('dropped inds')
 
     Latent_Heating = np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]
 
@@ -40,17 +41,17 @@ def extract_regionalData(year,month,region):
     
     Rain_Type = regionalXarray.rain_type.values.flatten()[keep_indices]
 
-    Bsr_Mask_Str = regionalXarray.bsr_mask_str.values.flatten()[keep_indices]
-    Dcc_Mask_Str = regionalXarray.dcc_mask_str.values.flatten()[keep_indices]
-    Dwc_Mask_Str = regionalXarray.dwc_mask_str.values.flatten()[keep_indices]
-    Wcc_Mask_Str = regionalXarray.wcc_mask_str.values.flatten()[keep_indices]
-    Storm_Mask_Str = regionalXarray.storm_mask_str.values.flatten()[keep_indices]
+    #Bsr_Mask_Str = regionalXarray.bsr_mask_str.values.flatten()[keep_indices]
+    #Dcc_Mask_Str = regionalXarray.dcc_mask_str.values.flatten()[keep_indices]
+    #Dwc_Mask_Str = regionalXarray.dwc_mask_str.values.flatten()[keep_indices]
+    #Wcc_Mask_Str = regionalXarray.wcc_mask_str.values.flatten()[keep_indices]
+    #Storm_Mask_Str = regionalXarray.storm_mask_str.values.flatten()[keep_indices]
 
-    Bsr_Mask_Mod = regionalXarray.bsr_mask_mod.values.flatten()[keep_indices]
-    Dcc_Mask_Mod = regionalXarray.dcc_mask_mod.values.flatten()[keep_indices]
-    Dwc_Mask_Mod = regionalXarray.dwc_mask_mod.values.flatten()[keep_indices]
-    Wcc_Mask_Mod = regionalXarray.wcc_mask_mod.values.flatten()[keep_indices]
-    Storm_Mask_Mod = regionalXarray.storm_mask_mod.values.flatten()[keep_indices]
+    #Bsr_Mask_Mod = regionalXarray.bsr_mask_mod.values.flatten()[keep_indices]
+    #Dcc_Mask_Mod = regionalXarray.dcc_mask_mod.values.flatten()[keep_indices]
+    #Dwc_Mask_Mod = regionalXarray.dwc_mask_mod.values.flatten()[keep_indices]
+    #Wcc_Mask_Mod = regionalXarray.wcc_mask_mod.values.flatten()[keep_indices]
+    #Storm_Mask_Mod = regionalXarray.storm_mask_mod.values.flatten()[keep_indices]
 
     Altitude_Lh = regionalXarray.altitude_lh.values
 
@@ -61,16 +62,16 @@ def extract_regionalData(year,month,region):
                                 'latitude': (['clusteredCoords'], Lat),
                                 'longitude': (['clusteredCoords'], Long),
                                 'time': (['clusteredCoords'], Time),
-                                'bsr_mask_str': (['clusteredCoords'], Bsr_Mask_Str),
-                                'dcc_mask_str': (['clusteredCoords'], Dcc_Mask_Str),
-                                'dwc_mask_str': (['clusteredCoords'], Dwc_Mask_Str),
-                                'wcc_mask_str': (['clusteredCoords'], Wcc_Mask_Str),
-                                'storm_mask_str': (['clusteredCoords'], Storm_Mask_Str),
-                                'bsr_mask_mod': (['clusteredCoords'], Bsr_Mask_Mod),
-                                'dcc_mask_mod': (['clusteredCoords'], Dcc_Mask_Mod),
-                                'dwc_mask_mod': (['clusteredCoords'], Dwc_Mask_Mod),
-                                'wcc_mask_mod': (['clusteredCoords'], Wcc_Mask_Mod),
-                                'storm_mask_mod': (['clusteredCoords'], Storm_Mask_Mod),
+                                #'bsr_mask_str': (['clusteredCoords'], Bsr_Mask_Str),
+                                #'dcc_mask_str': (['clusteredCoords'], Dcc_Mask_Str),
+                                #'dwc_mask_str': (['clusteredCoords'], Dwc_Mask_Str),
+                                #'wcc_mask_str': (['clusteredCoords'], Wcc_Mask_Str),
+                                #'storm_mask_str': (['clusteredCoords'], Storm_Mask_Str),
+                                #'bsr_mask_mod': (['clusteredCoords'], Bsr_Mask_Mod),
+                                #'dcc_mask_mod': (['clusteredCoords'], Dcc_Mask_Mod),
+                                #'dwc_mask_mod': (['clusteredCoords'], Dwc_Mask_Mod),
+                                #'wcc_mask_mod': (['clusteredCoords'], Wcc_Mask_Mod),
+                                #'storm_mask_mod': (['clusteredCoords'], Storm_Mask_Mod),
                                 'rain_type': (['clusteredCoords'],Rain_Type)},
                                 coords = {'clusteredCoords': np.arange(len(Time)),
                                         'altitude_lh': Altitude_Lh})
@@ -111,7 +112,7 @@ def read_TRMM_data(year,month):
     
     logging.info("in read TRMM")
     globalArray = []
-    regionNames = ['H07']#['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
+    regionNames = ['H01']#['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
 
     #Load in data for that month for each region
     for region in regionNames:
