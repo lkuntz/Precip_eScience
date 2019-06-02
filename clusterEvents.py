@@ -26,13 +26,14 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax):
     Latent_Heating = np.empty((0,19))
     LAT = np.empty((0))
     LONG = np.empty((0))
-    TIME = np.empty((0))
+    TIME = np.empty((0),dtype='datetime64')
     Rain_Type = np.empty((0))
 
     filename = str(year)+"_"+str(month).zfill(2)
-    for file in filename:
+    files = glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4")
+    for File in files:
 
-        regionalXarray = xr.open_dataset("data/Trmm/"+region+'/'+file+"/*.nc4")
+        regionalXarray = xr.open_dataset(File) 
         Surf_Rain = regionalXarray.surf_rain.values.flatten()
         [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
         Lat = Lat.flatten()
@@ -47,7 +48,7 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax):
 
         LAT = np.append(LAT,Lat[keep_indices])
         LONG = np.append(LONG,Long[keep_indices])
-        TIME = np.append(TIME,Time[keep_indices])
+        TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
         Rain_Type = np.append(Rain_Type,regionalXarray.rain_type.values.flatten()[keep_indices])
 
 
@@ -103,7 +104,7 @@ def read_TRMM_data(year,month):
     latmin = -90
     latmax = 90
     longmin = -30
-    lonmax = -20
+    longmax = -20
     #Load in data for that month for each region
     for region in regionNames:
         filename = str(year)+"_"+str(month).zfill(2)
