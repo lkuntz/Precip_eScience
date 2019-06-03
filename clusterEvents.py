@@ -245,7 +245,7 @@ def read_TRMM_data(year,month):
             runningNum = runningNum + len(TIME)
 
             
-    globalArray = xr.concat(globalArray)
+    globalArray = xr.merge(globalArray)
     logging.info('successful combo of arrays')
     #save as a netcdf
     globalArray.to_netcdf(path = filename+"Clustered_Data_Globe_test_AllTRMMData.nc4", compute = True)
@@ -330,8 +330,9 @@ def download_s3_data(year,month):
 #Translate the time into delta time since the first datapoint (in hours)
 def time_to_deltaTime(Time):
     InitialTime = np.min(Time)
-    DeltaTime = []
-    DeltaTime[:] = [int(x-InitialTime)/(10**9*60*60) for x in Time] #from nanoseconds to hours
+    logging.info(InitialTime)
+    logging.info(Time.shape)
+    DeltaTime = [int(x-InitialTime)/(10**9*60*60) for x in Time] #from nanoseconds to hours
     DeltaTime = np.array(DeltaTime) #convert from list to array
     
     return DeltaTime
