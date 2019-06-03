@@ -127,26 +127,36 @@ def read_TRMM_data(year,month):
             indices = np.squeeze(np.argwhere(days>np.max(days)-1))
             F = files[:len(indices)]
             for ind in range(len(indices)):
-                File = files[int(indices[ind])]
-            try:
-                regionalXarray = xr.open_dataset(File) 
-                Surf_Rain = regionalXarray.surf_rain.values.flatten()
-                Surf_Rain = np.nan_to_num(Surf_Rain)
-                [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
-                Lat = Lat.flatten()
-                Long = Long.flatten()
-                Time = Time.flatten()
+                F[ind] = files[int(indices[ind])]
+            files = F
 
-                keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-                
-                Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
-                SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
-                LAT = np.append(LAT,Lat[keep_indices])
-                LONG = np.append(LONG,Long[keep_indices])
-                TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
-                Rain_Type = np.append(Rain_Type,regionalXarray.rain_type.values.flatten()[keep_indices])
-            except:
-                logging.info(File)
+            SURF_RAIN = np.empty((0))
+            Latent_Heating = np.empty((0,19))
+            LAT = np.empty((0))
+            LONG = np.empty((0))
+            TIME = np.empty((0),dtype='datetime64')
+            Rain_Type = np.empty((0))
+
+            for File in files:
+                try:
+                    regionalXarray = xr.open_dataset(File) 
+                    Surf_Rain = regionalXarray.surf_rain.values.flatten()
+                    Surf_Rain = np.nan_to_num(Surf_Rain)
+                    [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
+                    Lat = Lat.flatten()
+                    Long = Long.flatten()
+                    Time = Time.flatten()
+
+                    keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
+                    
+                    Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
+                    SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
+                    LAT = np.append(LAT,Lat[keep_indices])
+                    LONG = np.append(LONG,Long[keep_indices])
+                    TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
+                    Rain_Type = np.append(Rain_Type,regionalXarray.rain_type.values.flatten()[keep_indices])
+                except:
+                    logging.info(File)
 
 
             logging.info(Latent_Heating.shape)    
@@ -186,10 +196,10 @@ def read_TRMM_data(year,month):
             days = [int(f[-17:-15]) for f in files]
             indices = np.argwhere(days<np.min(days)+1)
             
-            files = []
+            F = files[:len(indices)]
             for ind in range(len(indices)):
-                files[ind] = files[indices[ind]]
-            logging.info(len(indices),len(files))
+                F[ind] = files[int(indices[ind])]
+            files = F
 
             SURF_RAIN = np.empty((0))
             Latent_Heating = np.empty((0,19))
@@ -198,8 +208,6 @@ def read_TRMM_data(year,month):
             TIME = np.empty((0),dtype='datetime64')
             Rain_Type = np.empty((0))
 
-            filename = str(year)+"_"+str(month).zfill(2)
-            files = glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4")
             for File in files:
 
                 try:
