@@ -101,16 +101,17 @@ def read_TRMM_data(year,month):
     
     logging.info("in read TRMM")
     globalArray = []
-    regionNames = ['H01']#['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
-    latmin = -90
-    latmax = 90
-    longmin = -30
-    longmax = -20
+    regionNames = ['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
+    latmin = [-90, -90, -90, -90, 35, 30, -90, -90, -90, -90, -90, -90, -90, 15, -15, 30, -90, -90]
+    latmax = [ 90,  90,  90,  90, 90, 90,  90, -15, -30, -10, -35,  90, -10, 90,  15, 90,  90,  90]
+    longmin = [-170, -180, 60, -30, -180, -60, -30, 60, -180, -125, -180, -125, -180, -180, -30, -125, -180, -180]
+    longmax = [ 180,  180, 80,  20,   60, 180, -20, 80,  145,  -30,  180,  180,  180,   80, -20,  180,  145,  180]
     runningNum = 0
     #Load in data for that month for each region
-    for region in regionNames:
+    for r in range(len(regionNames)):
+        region = regionNames[r]
         filename = str(year)+"_"+str(month).zfill(2)
-        regionalArray, runningNum = extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum)
+        regionalArray, runningNum = extract_regionalData(year,month,region,latmin[r],latmax[r],longmin[r],longmax[r],runningNum)
         globalArray.append(regionalArray)
 
         #Load in previous day of data
@@ -329,6 +330,7 @@ def download_s3_data(year,month):
     
 #Translate the time into delta time since the first datapoint (in hours)
 def time_to_deltaTime(Time):
+    Time = np.squeeze(Time)
     InitialTime = np.min(Time)
     logging.info(InitialTime)
     logging.info(Time.shape)
