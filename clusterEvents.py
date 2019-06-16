@@ -614,7 +614,7 @@ def main_script(year, month):
     labels = cluster_and_label_data(DatatoCluster,eps,min_samples)
     logging.info("Fit the Data!")
     
-    save_s3_data(labels,eps,min_samples,globalArray,filename)
+    save_s3_data(labels,eps,globalArray,filename)
 
 if __name__ == '__main__':
     start_time = time.time()
