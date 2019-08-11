@@ -23,6 +23,7 @@ logging.basicConfig(filename='trmm.log', level=logging.INFO)
 def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum):
     SURF_RAIN = np.empty((0))
     Latent_Heating = np.empty((0,19))
+    corr_Zfactor = np.empty((0,80))
     logging.info(Latent_Heating.shape)
     LAT = np.empty((0))
     LONG = np.empty((0))
@@ -43,6 +44,7 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
 
             keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
             Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
+            corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
             
             SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
             LAT = np.append(LAT,Lat[keep_indices])
@@ -59,9 +61,11 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
                                 'latitude': (['clusteredCoords'], LAT),
                                 'longitude': (['clusteredCoords'], LONG),
                                 'time': (['clusteredCoords'], TIME),
-                                'rain_type': (['clusteredCoords'],Rain_Type)},
+                                'rain_type': (['clusteredCoords'],Rain_Type),
+                                'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
                                 coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
-                                        'altitude_lh': np.array(regionalXarray.altitude_lh)})
+                                        'altitude_lh': np.array(regionalXarray.altitude_lh),
+                                        'altitude': np.array(regionalXarray.altitude)})
 
     logging.info('made new array')
     runningNum = runningNum + len(TIME)
@@ -133,6 +137,7 @@ def read_TRMM_data(year,month):
 
             SURF_RAIN = np.empty((0))
             Latent_Heating = np.empty((0,19))
+            corr_Zfactor = np.epmty((0,80))
             LAT = np.empty((0))
             LONG = np.empty((0))
             TIME = np.empty((0),dtype='datetime64')
@@ -151,6 +156,8 @@ def read_TRMM_data(year,month):
                     keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
                     
                     Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
+                    corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
+
                     SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
                     LAT = np.append(LAT,Lat[keep_indices])
                     LONG = np.append(LONG,Long[keep_indices])
@@ -162,13 +169,15 @@ def read_TRMM_data(year,month):
 
             logging.info(Latent_Heating.shape)    
             regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
-                                    'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
-                                'latitude': (['clusteredCoords'], LAT),
-                                'longitude': (['clusteredCoords'], LONG),
-                                'time': (['clusteredCoords'], TIME),
-                                'rain_type': (['clusteredCoords'],Rain_Type)},
-                                coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
-                                        'altitude_lh': np.array(regionalXarray.altitude_lh)})
+                                        'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
+                                        'latitude': (['clusteredCoords'], LAT),
+                                        'longitude': (['clusteredCoords'], LONG),
+                                        'time': (['clusteredCoords'], TIME),
+                                        'rain_type': (['clusteredCoords'],Rain_Type),
+                                        'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
+                                        coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
+                                                'altitude_lh': np.array(regionalXarray.altitude_lh),
+                                                'altitude': np.array(regionalXarray.altitude)})
 
             globalArray.append(regionalXarray)
             runningNum = runningNum + len(TIME)
@@ -204,6 +213,7 @@ def read_TRMM_data(year,month):
 
             SURF_RAIN = np.empty((0))
             Latent_Heating = np.empty((0,19))
+            corr_Zfactor = np.empty((0,80))
             LAT = np.empty((0))
             LONG = np.empty((0))
             TIME = np.empty((0),dtype='datetime64')
@@ -223,6 +233,8 @@ def read_TRMM_data(year,month):
                     keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
                     
                     Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
+                    corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
+
                     SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
                     LAT = np.append(LAT,Lat[keep_indices])
                     LONG = np.append(LONG,Long[keep_indices])
@@ -234,13 +246,16 @@ def read_TRMM_data(year,month):
 
             logging.info(Latent_Heating.shape)    
             regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
-                                    'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
+                                'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
                                 'latitude': (['clusteredCoords'], LAT),
                                 'longitude': (['clusteredCoords'], LONG),
                                 'time': (['clusteredCoords'], TIME),
-                                'rain_type': (['clusteredCoords'],Rain_Type)},
+                                'rain_type': (['clusteredCoords'],Rain_Type),
+                                'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
                                 coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
-                                        'altitude_lh': np.array(regionalXarray.altitude_lh)})
+                                        'altitude_lh': np.array(regionalXarray.altitude_lh),
+                                        'altitude': np.array(regionalXarray.altitude)})
+
 
             globalArray.append(regionalXarray)
             runningNum = runningNum + len(TIME)
@@ -622,7 +637,7 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--year')
     args = parser.parse_args()
     year = int(args.year)
-    month = 7
+    month = 1
     # for month in range(1,13):
     logging.info("In Month: %s", (month))
     main_script(year,month)
