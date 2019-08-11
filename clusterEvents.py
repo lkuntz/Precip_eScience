@@ -78,7 +78,7 @@ def save_s3_data(labels,eps,globalArray,filename):
     globalArray = globalArray.merge(labelsArray)
 
     #save as a netcdf
-    globalArray.to_netcdf(path = filename+"Clustered_Data_Globe" + eps + ".nc4", compute = True)
+    globalArray.to_netcdf(path = filename+"Clustered_Data_Globe" + str(eps) + ".nc4", compute = True)
     
     home = expanduser("~")
 
@@ -91,9 +91,9 @@ def save_s3_data(labels,eps,globalArray,filename):
     bucket = s3.Bucket('trmm')
     home = os.getcwd()
     
-    bucket.upload_file(filename+"Clustered_Data_Globe" + eps + ".nc4",'trmm/'+filename+"Clustered_Data_Globe" + eps + ".nc4")
+    bucket.upload_file(filename+"Clustered_Data_Globe" + str(eps) + ".nc4",'trmm/'+filename+"Clustered_Data_Globe" + str(eps) + ".nc4")
 
-    os.remove(filename+"Clustered_Data_Globe" + eps + ".nc4")
+    os.remove(filename+"Clustered_Data_Globe" + str(eps) + ".nc4")
 
 #function that reads local data from TRMM in the EC2 instances
 def read_TRMM_data(year,month):
@@ -105,7 +105,7 @@ def read_TRMM_data(year,month):
     latmin = [-90, -90, -90, -90, 35, 30, -90, -90, -90, -90, -90, -90, -90, 15, -15, 30, -90, -90]
     latmax = [ 90,  90,  90,  90, 90, 90,  90, -15, -30, -10, -35,  90, -10, 90,  15, 90,  90,  90]
     longmin = [-170, -180, 60, -30, -180, -60, -30, 60, -180, -125, -180, -125, -180, -180, -30, -125, -180, -180]
-    longmax = [ 180,  180, 80,  20,   60, 180, -20, 80,  145,  -30,  180,  180,  180,   80, -20,  180,  145,  180]
+    longmax = [ -125,  180, 80,  20,   60, 180, -20, 80,  145,  -30,  180,  180,  180,   80, -20,  180,  145,  180]
     runningNum = 0
     #Load in data for that month for each region
     for r in range(len(regionNames)):
@@ -600,10 +600,10 @@ def main_script(year, month):
     SR_minrate = 2 #only keep data with rainrate greater than this value
     opt_frac = .5 #fraction of data to use when determining the optimal dbscan parameters
     Rad_Earth = 6371 #km earth's radius
-    MesoScale = 150 #Mesoscale is up to a few hundred km'
+    MesoScale = 100 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
-    # download_s3_data(year,month)
+    #download_s3_data(year,month)
     globalArray = read_TRMM_data(year,month)
     logging.info('process clustering metrics')
     DatatoCluster = data_to_cluster(globalArray)
