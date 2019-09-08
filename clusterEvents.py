@@ -137,7 +137,7 @@ def read_TRMM_data(year,month):
 
             SURF_RAIN = np.empty((0))
             Latent_Heating = np.empty((0,19))
-            corr_Zfactor = np.epmty((0,80))
+            corr_Zfactor = np.empty((0,80))
             LAT = np.empty((0))
             LONG = np.empty((0))
             TIME = np.empty((0),dtype='datetime64')
@@ -637,7 +637,7 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--year')
     args = parser.parse_args()
     year = int(args.year)
-    month = 1
+    month = 7
     # for month in range(1,13):
     logging.info("In Month: %s", (month))
     main_script(year,month)
