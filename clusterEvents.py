@@ -35,6 +35,8 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
     for File in files:
         try:
             regionalXarray = xr.open_dataset(File) 
+            corr_Z = np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[:, np.argwhere(np.array(regionalXarray.altitude)==2)])
+            corr_Z = np.nan_to_num(corr_Z)
             Surf_Rain = regionalXarray.surf_rain.values.flatten()
             Surf_Rain = np.nan_to_num(Surf_Rain)
             [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
@@ -42,7 +44,8 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
             Long = Long.flatten()
             Time = Time.flatten()
 
-            keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
+            # keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
+            keep_indices = np.where((corr_Z>17)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
             Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
             corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
             
@@ -109,7 +112,7 @@ def read_TRMM_data(year,month):
     latmin = [-90, -90, -90, -90, 35, 30, -90, -90, -90, -90, -90, -90, -90, 15, -15, 30, -90, -90]
     latmax = [ 90,  90,  90,  90, 90, 90,  90, -15, -30, -10, -35,  90, -10, 90,  15, 90,  90,  90]
     longmin = [-170, -180, 60, -30, -180, -60, -30, 60, -180, -125, -180, -125, -180, -180, -30, -125, -180, -180]
-    longmax = [ -125,  180, 80,  20,   60, 180, -20, 80,  145,  -30,  180,  180,  180,   80, -20,  180,  145,  180]
+    longmax = [ -125,  180, 80,  -20,   60, 180, -20, 80,  145,  -90,  180,  180,  180,   80, -20,  180,  145,  180]
     runningNum = 0
     #Load in data for that month for each region
     for r in range(len(regionNames)):
