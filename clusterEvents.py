@@ -34,9 +34,10 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
     files = glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4")
     for File in files:
         try:
-            regionalXarray = xr.open_dataset(File) 
-            corr_Z = np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[:, np.argwhere(np.array(regionalXarray.altitude)==2)])
-            corr_Z = np.nan_to_num(corr_Z)
+            regionalXarray = xr.open_dataset(File)
+            # corr_Z = np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80)))
+            # corr_Z = np.nan_to_num(corr_Z, nan=-10)
+            # corr_Z = np.squeeze(corr_Z[np.arange(corr_Z.shape[0]), np.argmax(corr_Z>-1, axis=1)])
             Surf_Rain = regionalXarray.surf_rain.values.flatten()
             Surf_Rain = np.nan_to_num(Surf_Rain)
             [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
@@ -44,8 +45,8 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
             Long = Long.flatten()
             Time = Time.flatten()
 
-            # keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-            keep_indices = np.where((corr_Z>17)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
+            keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
+            # keep_indices = np.where((corr_Z>17)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
             Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
             corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
             
@@ -54,8 +55,9 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
             LONG = np.append(LONG,Long[keep_indices])
             TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
             Rain_Type = np.append(Rain_Type,regionalXarray.rain_type.values.flatten()[keep_indices])
-        except:
-            logging.info(File)
+        except Exception as e:
+            logging.info(e)
+            logging.info('ERROR in ' + File)
 
 
     logging.info(Latent_Heating.shape)    
@@ -618,7 +620,7 @@ def main_script(year, month):
     SR_minrate = 2 #only keep data with rainrate greater than this value
     opt_frac = .5 #fraction of data to use when determining the optimal dbscan parameters
     Rad_Earth = 6371 #km earth's radius
-    MesoScale = 100 #Mesoscale is up to a few hundred km'
+    MesoScale = 50 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
     #download_s3_data(year,month)
