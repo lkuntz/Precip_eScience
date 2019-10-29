@@ -44,7 +44,7 @@ class Multi_instance(object):
         self.AMI = ""
         self.MIN_COUNT = 1
         self.MAX_COUNT = 1
-        self.INSTANCE_TYPE = "t2.micro"
+        self.INSTANCE_TYPE = "t2.2xlarge"
         self.SECURITY_GROUP = []
         self.KEY_NAME = 'winter19_incubator'
         self.TAG_DELIMITER = '-'

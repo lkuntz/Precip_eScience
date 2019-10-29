@@ -16,6 +16,7 @@ import json
 import time
 import logging
 import argparse
+import shutil
 ROOT_DIR = '/home/ubuntu/precip/Precip_eScience/'
 os.chdir(ROOT_DIR)
 logging.basicConfig(filename='trmm.log', level=logging.INFO)
@@ -24,7 +25,6 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
     SURF_RAIN = np.empty((0))
     Latent_Heating = np.empty((0,19))
     corr_Zfactor = np.empty((0,80))
-    logging.info(Latent_Heating.shape)
     LAT = np.empty((0))
     LONG = np.empty((0))
     TIME = np.empty((0),dtype='datetime64')
@@ -60,7 +60,6 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
             logging.info('ERROR in ' + File)
 
 
-    logging.info(Latent_Heating.shape)    
     regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
                                 'latitude': (['clusteredCoords'], LAT),
@@ -72,7 +71,6 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
                                         'altitude_lh': np.array(regionalXarray.altitude_lh),
                                         'altitude': np.array(regionalXarray.altitude)})
 
-    logging.info('made new array')
     runningNum = runningNum + len(TIME)
 
     return regionalXarray, runningNum
@@ -172,7 +170,6 @@ def read_TRMM_data(year,month):
                     logging.info(File)
 
 
-            logging.info(Latent_Heating.shape)    
             regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                         'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
                                         'latitude': (['clusteredCoords'], LAT),
@@ -249,7 +246,6 @@ def read_TRMM_data(year,month):
                     logging.info(File)
 
 
-            logging.info(Latent_Heating.shape)    
             regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
                                 'latitude': (['clusteredCoords'], LAT),
@@ -307,6 +303,7 @@ def download_s3_data(year,month):
     #Load in data for that month for each region
     for region in regionNames:
         filename = str(year)+"_"+str(month).zfill(2)
+        shutil.rmtree(os.path.join(home,'data/Trmm/'+region+'/'))
         logging.info(filename + " " + region)
         if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
             os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
@@ -623,7 +620,7 @@ def main_script(year, month):
     MesoScale = 50 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
-    #download_s3_data(year,month)
+    download_s3_data(year,month)
     globalArray = read_TRMM_data(year,month)
     logging.info('process clustering metrics')
     DatatoCluster = data_to_cluster(globalArray)
@@ -642,9 +639,8 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--year')
     args = parser.parse_args()
     year = int(args.year)
-    month = 7
-    # for month in range(1,13):
-    logging.info("In Month: %s", (month))
-    main_script(year,month)
+    for month in range(1,13):
+        logging.info("In Month: %s", (month))
+        main_script(year,month)
     print("Done")
     print("--- %s seconds ---" % (time.time() - start_time))
