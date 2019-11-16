@@ -61,13 +61,24 @@ def process_file(regionalXarray, latmin, latmax, longmin, longmax):
         Time = np.array(Time[keep_indices], dtype='datetime64')
         Rain_Type = regionalXarray.rain_type.values.flatten()[keep_indices]
 
-        return Latent_Heating, corr_Z_factor, Surf_Rain, Lat, Long, Time, Rain_Type
+        return da.from_delayed(Latent_Heating, shape=(np.nan, 19)), \
+               da.from_delayed(corr_Z_factor, shape=(np.nan, 80)),\
+               da.from_delayed(Surf_Rain, shape=(np.nan)),\
+               da.from_delayed(Lat, shape=(np.nan)),\
+               da.from_delayed(Long, shape=(np.nan)),\
+               da.from_delayed(Time, shape=(np.nan)),\
+               da.from_delayed(Rain_Type, shape=(np.nan))
 
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
         return da.from_delayed(np.empty([0, 19]), shape=(0, 19)), \
-               da.from_delayed(np.empty([0, 80]), shape=(0, 80)), [], [], [], [], []
+               da.from_delayed(np.empty([0, 80]), shape=(0, 80)), \
+               da.from_delayed(np.empty([0]), shape=(0)),\
+               da.from_delayed(np.empty([0]), shape=(0)),\
+               da.from_delayed(np.empty([0]), shape=(0)),\
+               da.from_delayed(np.empty([0]), shape=(0)),\
+               da.from_delayed(np.empty([0]), shape=(0))
 
 
 def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum):
