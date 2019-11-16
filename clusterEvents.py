@@ -18,6 +18,7 @@ import logging
 import argparse
 import shutil
 import dask
+import dask.array as da
 from dask.distributed import Client
 
 
@@ -65,18 +66,18 @@ def process_file(regionalXarray, latmin, latmax, longmin, longmax):
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
-        return dask.array.from_delayed(np.empty([0, 19]), shape=(0, 19)), \
-               dask.array.from_delayed(np.empty([0, 80]), shape=(0, 80)), [], [], [], [], []
+        return da.from_delayed(np.empty([0, 19]), shape=(0, 19)), \
+               da.from_delayed(np.empty([0, 80]), shape=(0, 80)), [], [], [], [], []
 
 
 def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum):
-    SURF_RAIN = np.empty((0))
-    Latent_Heating = np.empty((0, 19))
-    corr_Zfactor = np.empty((0, 80))
-    LAT = np.empty((0))
-    LONG = np.empty((0))
-    TIME = np.empty((0), dtype='datetime64')
-    Rain_Type = np.empty((0))
+    SURF_RAIN = []
+    Latent_Heating = []
+    corr_Zfactor = []
+    LAT = []
+    LONG = []
+    TIME = []
+    Rain_Type = []
 
     filename = str(year)+"_"+str(month).zfill(2)
     files = glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4")
@@ -85,26 +86,28 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
         latent_heating, corr_Z_factor, surf_rain, lat, long, time, rain_type = process_file(array, latmin, latmax,
                                                                                             longmin, longmax)
 
-        Latent_Heating = np.append(Latent_Heating, latent_heating, axis=0)
-        corr_Zfactor = np.append(corr_Zfactor, corr_Z_factor, axis=0)
-        SURF_RAIN = np.append(SURF_RAIN, surf_rain)
-        LAT = np.append(LAT, lat)
-        LONG = np.append(LONG, long)
-        TIME = np.append(TIME, time)
-        Rain_Type = np.append(Rain_Type, rain_type)
+        Latent_Heating.append(Latent_Heating)
+        corr_Zfactor.append(corr_Z_factor)
+        SURF_RAIN.append(surf_rain)
+        LAT.append(lat)
+        LONG.append(long)
+        TIME.append(time)
+        Rain_Type.append(rain_type)
 
-    regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
-                                'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
-                                'latitude': (['clusteredCoords'], LAT),
-                                'longitude': (['clusteredCoords'], LONG),
-                                'time': (['clusteredCoords'], TIME),
-                                'rain_type': (['clusteredCoords'],Rain_Type),
-                                'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
-                                coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
+    regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], da.concatenate(SURF_RAIN)),
+                                'latent_heating': (['clusteredCoords','altitude_lh'], da.concatenate(
+                                    Latent_Heating, axis=0)),
+                                'latitude': (['clusteredCoords'], da.concatenate(LAT)),
+                                'longitude': (['clusteredCoords'], da.concatenate(LONG)),
+                                'time': (['clusteredCoords'], da.concatenate(TIME)),
+                                'rain_type': (['clusteredCoords'],da.concatenate(Rain_Type)),
+                                'corr_Zfactor': (['clusteredCoords', 'altitude'], da.concatenate(corr_Zfactor,
+                                                                                                 axis=0))},
+                                coords = {'clusteredCoords': runningNum + np.arange(len(da.concatenate(TIME))),
                                         'altitude_lh': np.array(array.altitude_lh),
                                         'altitude': np.array(array.altitude)})
 
-    runningNum = runningNum + len(TIME)
+    runningNum = runningNum + len(da.concatenate(TIME))
 
     return regionalXarray, runningNum
 
