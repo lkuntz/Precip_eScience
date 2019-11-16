@@ -26,7 +26,7 @@ os.chdir(ROOT_DIR)
 logging.basicConfig(filename='trmm.log', level=logging.INFO)
 
 
-@dask.delayed
+@dask.delayed(nout=1)
 def read_file(File):
     try:
         array = xr.open_dataarray(File)
@@ -36,7 +36,8 @@ def read_file(File):
         logging.info('ERROR in ' + File)
         return []
 
-@dask.delayed
+
+@dask.delayed(nout=7)
 def process_file(regionalXarray, latmin, latmax, longmin, longmax):
     try:
         Surf_Rain = regionalXarray.surf_rain.values.flatten()
@@ -317,7 +318,12 @@ def read_TRMM_data(year,month):
     #globalArray = xr.auto_combine(globalArray,concat_dim='clusteredCoords')
 
     return globalArray
-    
+
+
+def bucket_download(bucket, obj_key, filepath):
+    bucket.download_file(obj_key, filepath)
+
+
 #function that connects to the S3 bucket, downloads the file, reads in the data, and deletes the file
 def download_s3_data(year,month):
     regionNames = ['EPO', 'AFC', 'CIO', 'H01', 'H02', 'H03', 'H04', 'H05', 'H06', 'H07', 'H08', 'MSA', 'SAM', 'SAS', 'TRA', 'USA', 'WMP', 'WPO']
@@ -340,10 +346,14 @@ def download_s3_data(year,month):
         logging.info(filename + " " + region)
         if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
             os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
-        for obj in bucket.objects.filter(Delimiter='', Prefix= region+'/'+filename+'/'):
+        delayed_downloads = []
+        for obj in bucket.objects.filter(Delimiter='', Prefix=region+'/'+filename+'/'):
             if obj.key[-4:] == ".nc4":
                 logging.info(obj.key)
-                bucket.download_file(obj.key,os.path.join(home,'data/Trmm/'+obj.key))
+                delayed_downloads.append(dask.delayed(bucket_download)(
+                    bucket, obj.key, os.path.join(home,'data/Trmm/'+obj.key)))
+
+        dask.compute(*delayed_downloads)
 
         #download previous month of data
         year_prev = year
@@ -356,10 +366,14 @@ def download_s3_data(year,month):
             filename = str(year_prev)+"_"+str(month_prev).zfill(2)
             if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
                 os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
+            delayed_downloads = []
             for obj in bucket.objects.filter(Delimiter='', Prefix=region+'/'+filename+'/'):
                 if obj.key[-4:] == ".nc4":
+                    delayed_downloads.append(dask.delayed(bucket_download)(
+                        bucket, obj.key, os.path.join(
+                            os.path.join(home,'data/Trmm/'+region+'/'+filename, obj.key[17:]))))
 
-                    bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+            dask.compute(*delayed_downloads)
 
         #download  next month of data
         year_next = year
@@ -372,10 +386,12 @@ def download_s3_data(year,month):
             filename = str(year_next)+"_"+str(month_next).zfill(2)
             if not os.path.exists(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/')):
                 os.makedirs(os.path.join(home,'data/Trmm/'+region+'/'+filename+'/'))
+            delayed_downloads = []
             for obj in bucket.objects.filter(Delimiter='', Prefix=region+'/'+filename+'/'):
                 if obj.key[-4:] == ".nc4":
-
-                    bucket.download_file(obj.key,os.path.join(os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+                    delayed_downloads.append(dask.delayed(bucket_download)(
+                        bucket, obj.key, os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
+            dask.compute(*delayed_downloads)
     return
     
 #Translate the time into delta time since the first datapoint (in hours)
