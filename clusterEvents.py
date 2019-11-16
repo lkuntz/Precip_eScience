@@ -65,7 +65,8 @@ def process_file(regionalXarray, latmin, latmax, longmin, longmax):
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
-        return np.empty([0, 19]), np.empty([0, 80]), [], [], [], [], []
+        return dask.array.from_delayed(np.empty([0, 19]), shape=(0, 19)), \
+               dask.array.from_delayed(np.empty([0, 80]), shape=(0, 80)), [], [], [], [], []
 
 
 def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum):
@@ -100,8 +101,8 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
                                 'rain_type': (['clusteredCoords'],Rain_Type),
                                 'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
                                 coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
-                                        'altitude_lh': np.array(regionalXarray.altitude_lh),
-                                        'altitude': np.array(regionalXarray.altitude)})
+                                        'altitude_lh': np.array(array.altitude_lh),
+                                        'altitude': np.array(array.altitude)})
 
     runningNum = runningNum + len(TIME)
 
