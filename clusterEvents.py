@@ -65,7 +65,7 @@ def process_file(regionalXarray, latmin, latmax, longmin, longmax):
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
-        return [], [], [], [], [], [], []
+        return np.empty([0, 19]), np.empty([0, 80]), [], [], [], [], []
 
 
 def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum):
@@ -83,14 +83,14 @@ def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,running
         array = read_file(File)
         latent_heating, corr_Z_factor, surf_rain, lat, long, time, rain_type = process_file(array, latmin, latmax,
                                                                                             longmin, longmax)
-        if len(latent_heating) > 0:
-            Latent_Heating = np.append(Latent_Heating, latent_heating, axis=0)
-            corr_Zfactor = np.append(corr_Zfactor, corr_Z_factor, axis=0)
-            SURF_RAIN = np.append(SURF_RAIN, surf_rain)
-            LAT = np.append(LAT, lat)
-            LONG = np.append(LONG, long)
-            TIME = np.append(TIME, time)
-            Rain_Type = np.append(Rain_Type, rain_type)
+
+        Latent_Heating = np.append(Latent_Heating, latent_heating, axis=0)
+        corr_Zfactor = np.append(corr_Zfactor, corr_Z_factor, axis=0)
+        SURF_RAIN = np.append(SURF_RAIN, surf_rain)
+        LAT = np.append(LAT, lat)
+        LONG = np.append(LONG, long)
+        TIME = np.append(TIME, time)
+        Rain_Type = np.append(Rain_Type, rain_type)
 
     regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
