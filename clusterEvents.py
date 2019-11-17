@@ -72,20 +72,15 @@ def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
 
     array = xr.open_dataset(files[-1])
 
-    Latent_Heating = []
-    for i in range(len(Returned_Vals)):
-        if len(Returned_Vals[i][0]) > 0:
-            Latent_Heating.append(Returned_Vals[i][0])
-
     Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][0]) > 0],
                                     axis=0)
-    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][0]) > 0],
+    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][1]) > 0],
                                   axis=0)
-    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][0]) > 0])
-    LAT = np.hstack([Returned_Vals[i][3] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][0]) > 0])
-    LONG = np.hstack([Returned_Vals[i][4] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][0]) > 0])
-    TIME = np.hstack([Returned_Vals[i][5] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][0]) > 0])
-    Rain_Type = np.hstack([Returned_Vals[i][6] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][0]) > 0])
+    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][2]) > 0])
+    LAT = np.hstack([Returned_Vals[i][3] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][3]) > 0])
+    LONG = np.hstack([Returned_Vals[i][4] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][4]) > 0])
+    TIME = np.hstack([Returned_Vals[i][5] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][5]) > 0])
+    Rain_Type = np.hstack([Returned_Vals[i][6] for i in range(len(Returned_Vals)) if not len(Returned_Vals[i][6]) > 0])
 
     regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
