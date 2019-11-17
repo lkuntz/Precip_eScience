@@ -56,7 +56,7 @@ def process_file(File, latmin, latmax, longmin, longmax):
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
-        return [], [], [], [], [], [], []
+        return -9999, -9999, -9999, -9999, -9999, -9999, -9999
 
 
 def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
@@ -66,7 +66,7 @@ def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
 
     array = xr.open_dataset(files[-1])
 
-    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][0]) > 0],
+    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999],
                                     axis=0)
     corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][1]) > 0],
                                   axis=0)
