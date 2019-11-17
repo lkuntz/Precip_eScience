@@ -30,7 +30,7 @@ logging.basicConfig(filename='trmm.log', level=logging.INFO)
 @dask.delayed(nout=7)
 def process_file(File, latmin, latmax, longmin, longmax):
     try:
-        regionalXarray = xr.open_dataarray(File)
+        regionalXarray = xr.open_dataset(File)
         Surf_Rain = regionalXarray.surf_rain.values.flatten()
         Surf_Rain = np.nan_to_num(Surf_Rain)
         [Lat, Time, Long] = np.meshgrid(regionalXarray.latitude.values, regionalXarray.time.values,
@@ -62,19 +62,19 @@ def process_file(File, latmin, latmax, longmin, longmax):
 def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
     Returned_Vals = [dask.delayed(process_file)(File, latmin, latmax, longmin, longmax) for File in files]
 
-    Returned_Vals = dask.compute(Returned_Vals)[0]
+    Returned_Vals = dask.compute(*Returned_Vals, scheduler='processes', num_workers=5)[0]
 
     array = xr.open_dataarray(files[-1])
 
-    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in Returned_Vals if not np.isnan(Returned_Vals[i][0])],
+    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][0])],
                                     axis=0)
-    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in Returned_Vals if not np.isnan(Returned_Vals[i][1])],
+    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][1])],
                                   axis=0)
-    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in Returned_Vals if not np.isnan(Returned_Vals[i][2])])
-    LAT = np.hstack([Returned_Vals[i][3] for i in Returned_Vals if not np.isnan(Returned_Vals[i][3])])
-    LONG = np.hstack([Returned_Vals[i][4] for i in Returned_Vals if not np.isnan(Returned_Vals[i][4])])
-    TIME = np.hstack([Returned_Vals[i][5] for i in Returned_Vals if not np.isnan(Returned_Vals[i][5])])
-    Rain_Type = np.hstack([Returned_Vals[i][6] for i in Returned_Vals if not np.isnan(Returned_Vals[i][6])])
+    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][2])])
+    LAT = np.hstack([Returned_Vals[i][3] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][3])])
+    LONG = np.hstack([Returned_Vals[i][4] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][4])])
+    TIME = np.hstack([Returned_Vals[i][5] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][5])])
+    Rain_Type = np.hstack([Returned_Vals[i][6] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][6])])
 
     regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
