@@ -62,8 +62,7 @@ def process_file(File, latmin, latmax, longmin, longmax):
 def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
     Returned_Vals = []
     for File in files:
-        vals = dask.delayed(process_file)(File, latmin, latmax, longmin, longmax)
-        Returned_Vals = Returned_Vals.append(vals)
+        Returned_Vals.append(dask.delayed(process_file)(File, latmin, latmax, longmin, longmax))
 
     Returned_Vals = dask.compute(*Returned_Vals, scheduler='processes', num_workers=5)[0]
 
