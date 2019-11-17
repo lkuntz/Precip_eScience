@@ -44,11 +44,11 @@ def process_file(File, latmin, latmax, longmin, longmax):
         Latent_Heating = np.squeeze(
             np.reshape(np.moveaxis(regionalXarray.latent_heating.values, 1, 3), (-1, 19))[keep_indices, :])
         if len(Latent_Heating.shape) == 1:
-            Latent_Heating = np.expand_dims(Latent_Heating, axis=1)
+            Latent_Heating = np.expand_dims(Latent_Heating, axis=0)
         corr_Z_factor = np.squeeze(
             np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values, 1, 3), (-1, 80))[keep_indices, :])
         if len(corr_Z_factor.shape) == 1:
-            corr_Z_factor = np.expand_dims(corr_Z_factor, axis=1)
+            corr_Z_factor = np.expand_dims(corr_Z_factor, axis=0)
         Surf_Rain = Surf_Rain[keep_indices]
         Lat = Lat[keep_indices]
         Long = Long[keep_indices]
