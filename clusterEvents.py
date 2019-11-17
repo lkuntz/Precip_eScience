@@ -27,20 +27,10 @@ os.chdir(ROOT_DIR)
 logging.basicConfig(filename='trmm.log', level=logging.INFO)
 
 
-@dask.delayed(nout=1)
-def read_file(File):
-    try:
-        array = xr.open_dataarray(File)
-        return array
-    except Exception as e:
-        logging.info(e)
-        logging.info('ERROR in ' + File)
-        return []
-
-
 @dask.delayed(nout=7)
-def process_file(regionalXarray, latmin, latmax, longmin, longmax):
+def process_file(File, latmin, latmax, longmin, longmax):
     try:
+        regionalXarray = xr.open_dataarray(File)
         Surf_Rain = regionalXarray.surf_rain.values.flatten()
         Surf_Rain = np.nan_to_num(Surf_Rain)
         [Lat, Time, Long] = np.meshgrid(regionalXarray.latitude.values, regionalXarray.time.values,
@@ -61,64 +51,46 @@ def process_file(regionalXarray, latmin, latmax, longmin, longmax):
         Time = np.array(Time[keep_indices], dtype='datetime64')
         Rain_Type = regionalXarray.rain_type.values.flatten()[keep_indices]
 
-        return da.from_delayed(Latent_Heating, shape=(np.nan, 19)), \
-               da.from_delayed(corr_Z_factor, shape=(np.nan, 80)),\
-               da.from_delayed(Surf_Rain, shape=(np.nan)),\
-               da.from_delayed(Lat, shape=(np.nan)),\
-               da.from_delayed(Long, shape=(np.nan)),\
-               da.from_delayed(Time, shape=(np.nan)),\
-               da.from_delayed(Rain_Type, shape=(np.nan))
+        return Latent_Heating, corr_Z_factor, Surf_Rain, Lat, Long, Time, Rain_Type
 
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
-        return da.from_delayed(np.empty([0, 19]), shape=(0, 19)), \
-               da.from_delayed(np.empty([0, 80]), shape=(0, 80)), \
-               da.from_delayed(np.empty([0]), shape=(0)),\
-               da.from_delayed(np.empty([0]), shape=(0)),\
-               da.from_delayed(np.empty([0]), shape=(0)),\
-               da.from_delayed(np.empty([0]), shape=(0)),\
-               da.from_delayed(np.empty([0]), shape=(0))
+        return [], [], [], [], [], [], []
 
 
-def extract_regionalData(year,month,region,latmin,latmax,longmin,longmax,runningNum):
-    SURF_RAIN = []
-    Latent_Heating = []
-    corr_Zfactor = []
-    LAT = []
-    LONG = []
-    TIME = []
-    Rain_Type = []
-
-    filename = str(year)+"_"+str(month).zfill(2)
-    files = glob.glob("data/Trmm/"+region+'/'+filename+"/*.nc4")
+def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
+    Returned_Vals = []
     for File in files:
-        array = read_file(File)
-        latent_heating, corr_Z_factor, surf_rain, lat, long, time, rain_type = process_file(array, latmin, latmax,
-                                                                                            longmin, longmax)
+        returned_values = dask.delayed(process_file)(File, latmin, latmax, longmin, longmax)
+        Returned_Vals.append(returned_values)
 
-        Latent_Heating.append(Latent_Heating)
-        corr_Zfactor.append(corr_Z_factor)
-        SURF_RAIN.append(surf_rain)
-        LAT.append(lat)
-        LONG.append(long)
-        TIME.append(time)
-        Rain_Type.append(rain_type)
+    Returned_Vals = dask.compute(Returned_Vals)[0]
 
-    regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], da.concatenate(SURF_RAIN)),
-                                'latent_heating': (['clusteredCoords','altitude_lh'], da.concatenate(
-                                    Latent_Heating, axis=0)),
-                                'latitude': (['clusteredCoords'], da.concatenate(LAT)),
-                                'longitude': (['clusteredCoords'], da.concatenate(LONG)),
-                                'time': (['clusteredCoords'], da.concatenate(TIME)),
-                                'rain_type': (['clusteredCoords'],da.concatenate(Rain_Type)),
-                                'corr_Zfactor': (['clusteredCoords', 'altitude'], da.concatenate(corr_Zfactor,
-                                                                                                 axis=0))},
-                                coords = {'clusteredCoords': runningNum + np.arange(len(da.concatenate(TIME))),
+    array = xr.open_dataarray(files[-1])
+
+    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in Returned_Vals if len(Returned_Vals[i][0]) > 0],
+                                    axis=0)
+    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in Returned_Vals if len(Returned_Vals[i][1]) > 0],
+                                  axis=0)
+    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in Returned_Vals if len(Returned_Vals[i][2]) > 0])
+    LAT = np.hstack([Returned_Vals[i][3] for i in Returned_Vals if len(Returned_Vals[i][3]) > 0])
+    LONG = np.hstack([Returned_Vals[i][4] for i in Returned_Vals if len(Returned_Vals[i][4]) > 0])
+    TIME = np.hstack([Returned_Vals[i][5] for i in Returned_Vals if len(Returned_Vals[i][5]) > 0])
+    Rain_Type = np.hstack([Returned_Vals[i][6] for i in Returned_Vals if len(Returned_Vals[i][6]) > 0])
+
+    regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
+                                'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
+                                'latitude': (['clusteredCoords'], LAT),
+                                'longitude': (['clusteredCoords'], LONG),
+                                'time': (['clusteredCoords'], TIME),
+                                'rain_type': (['clusteredCoords'], Rain_Type),
+                                'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
+                                coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
                                         'altitude_lh': np.array(array.altitude_lh),
                                         'altitude': np.array(array.altitude)})
 
-    runningNum = runningNum + len(da.concatenate(TIME))
+    runningNum = runningNum + len(TIME)
 
     return regionalXarray, runningNum
 
@@ -166,8 +138,9 @@ def read_TRMM_data(year,month):
     for r in range(len(regionNames)):
         region = regionNames[r]
         filename = str(year)+"_"+str(month).zfill(2)
-        regionalArray, runningNum = dask.compute(extract_regionalData(year, month, region, latmin[r], latmax[r],
-                                                                      longmin[r], longmax[r], runningNum))
+        files = glob.glob("data/Trmm/" + region + '/' + filename + "/*.nc4")
+        regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
+                                                         longmin[r], longmax[r], runningNum)
         globalArray.append(regionalArray)
 
         #Load in previous day of data
@@ -187,62 +160,10 @@ def read_TRMM_data(year,month):
                 F[ind] = files[int(indices[ind])]
             files = F
 
-            SURF_RAIN = np.empty((0))
-            Latent_Heating = np.empty((0,19))
-            corr_Zfactor = np.empty((0,80))
-            LAT = np.empty((0))
-            LONG = np.empty((0))
-            TIME = np.empty((0),dtype='datetime64')
-            Rain_Type = np.empty((0))
-
-            for File in files:
-                try:
-                    regionalXarray = xr.open_dataset(File) 
-                    Surf_Rain = regionalXarray.surf_rain.values.flatten()
-                    Surf_Rain = np.nan_to_num(Surf_Rain)
-                    [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
-                    Lat = Lat.flatten()
-                    Long = Long.flatten()
-                    Time = Time.flatten()
-
-                    keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-                    
-                    Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
-                    corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
-
-                    SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
-                    LAT = np.append(LAT,Lat[keep_indices])
-                    LONG = np.append(LONG,Long[keep_indices])
-                    TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
-                    Rain_Type = np.append(Rain_Type,regionalXarray.rain_type.values.flatten()[keep_indices])
-                except:
-                    logging.info(File)
-
-
-            regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
-                                        'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
-                                        'latitude': (['clusteredCoords'], LAT),
-                                        'longitude': (['clusteredCoords'], LONG),
-                                        'time': (['clusteredCoords'], TIME),
-                                        'rain_type': (['clusteredCoords'],Rain_Type),
-                                        'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
-                                        coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
-                                                'altitude_lh': np.array(regionalXarray.altitude_lh),
-                                                'altitude': np.array(regionalXarray.altitude)})
+            regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
+                                                             longmin[r], longmax[r], runningNum)
 
             globalArray.append(regionalXarray)
-            runningNum = runningNum + len(TIME)
-
-
-            # for i in range(len(indices)):
-            #     file = files[int(indices[i])]
-
-            #     singleXarray = xr.open_dataset(file)
-            #     singleXarray = singleXarray.drop('swath')
-            #     stackedArray = singleXarray
-            #     #stackedArray = singleXarray.stack(clusteredCoords=('latitude', 'longitude','time'))
-            #     stackedArray.where(stackedArray.surf_rain>.4,drop=True)
-            #     globalArray.append(stackedArray)
 
         #Load in next day of data
         year_next = year
@@ -251,7 +172,7 @@ def read_TRMM_data(year,month):
             year_next = year+1
             month_next = 1
 
-        if year_next<2014:
+        if year_next < 2014:
             filename = str(year_next)+"_"+str(month_next).zfill(2)
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
@@ -262,55 +183,11 @@ def read_TRMM_data(year,month):
                 F[ind] = files[int(indices[ind])]
             files = F
 
-            SURF_RAIN = np.empty((0))
-            Latent_Heating = np.empty((0,19))
-            corr_Zfactor = np.empty((0,80))
-            LAT = np.empty((0))
-            LONG = np.empty((0))
-            TIME = np.empty((0),dtype='datetime64')
-            Rain_Type = np.empty((0))
-
-            for File in files:
-
-                try:
-                    regionalXarray = xr.open_dataset(File) 
-                    Surf_Rain = regionalXarray.surf_rain.values.flatten()
-                    Surf_Rain = np.nan_to_num(Surf_Rain)
-                    [Lat,Time,Long] = np.meshgrid(regionalXarray.latitude.values,regionalXarray.time.values,regionalXarray.longitude.values)
-                    Lat = Lat.flatten()
-                    Long = Long.flatten()
-                    Time = Time.flatten()
-
-                    keep_indices = np.where((Surf_Rain>.4)&(Lat>latmin)&(Lat<latmax)&(Long>longmin)&(Long<longmax))
-                    
-                    Latent_Heating = np.append(Latent_Heating,np.squeeze(np.reshape(np.moveaxis(regionalXarray.latent_heating.values,1,3),(-1,19))[keep_indices,:]),axis=0)
-                    corr_Zfactor = np.append(corr_Zfactor,np.squeeze(np.reshape(np.moveaxis(regionalXarray.corr_Zfactor.values,1,3),(-1,80))[keep_indices,:]),axis=0)
-
-                    SURF_RAIN = np.append(SURF_RAIN,Surf_Rain[keep_indices])
-                    LAT = np.append(LAT,Lat[keep_indices])
-                    LONG = np.append(LONG,Long[keep_indices])
-                    TIME = np.append(TIME,np.array(Time[keep_indices],dtype='datetime64'))
-                    Rain_Type = np.append(Rain_Type,regionalXarray.rain_type.values.flatten()[keep_indices])
-                except:
-                    logging.info(File)
-
-
-            regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
-                                'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
-                                'latitude': (['clusteredCoords'], LAT),
-                                'longitude': (['clusteredCoords'], LONG),
-                                'time': (['clusteredCoords'], TIME),
-                                'rain_type': (['clusteredCoords'],Rain_Type),
-                                'corr_Zfactor': (['clusteredCoords', 'altitude'], corr_Zfactor)},
-                                coords = {'clusteredCoords': runningNum + np.arange(len(TIME)),
-                                        'altitude_lh': np.array(regionalXarray.altitude_lh),
-                                        'altitude': np.array(regionalXarray.altitude)})
-
+            regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
+                                                             longmin[r], longmax[r], runningNum)
 
             globalArray.append(regionalXarray)
-            runningNum = runningNum + len(TIME)
 
-            
     globalArray = xr.merge(globalArray)
     logging.info('successful combo of arrays')
     #save as a netcdf
