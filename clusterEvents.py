@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import glob
 from sklearn.cluster import DBSCAN
+from sklearn.externals.joblib import parallel_backend
 from sklearn import metrics
 from sklearn.metrics import pairwise_distances, davies_bouldin_score
 from bayes_opt import BayesianOptimization
@@ -68,7 +69,7 @@ def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
     for File in files:
         Returned_Vals.append(dask.delayed(process_file)(File, latmin, latmax, longmin, longmax))
 
-    Returned_Vals = dask.compute(*Returned_Vals, scheduler='processes', num_workers=5)
+    Returned_Vals = dask.compute(*Returned_Vals, scheduler='processes', num_workers=16)
 
     array = xr.open_dataset(files[-1])
 
@@ -349,7 +350,7 @@ def data_to_cluster(stackedArray):
     return Xdata
 
 def cluster_and_label_data(Distance,eps,min_samps):
-    client = Client()
+    client = Client(processes=False, n_workers=5)
     model = DBSCAN(eps=eps, min_samples=min_samps,metric=distance_sphere_and_time)
     with parallel_backend('dask'):
         model.fit(Distance)
