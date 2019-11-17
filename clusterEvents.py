@@ -189,7 +189,7 @@ def read_TRMM_data(year,month):
             regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
                                                              longmin[r], longmax[r], runningNum)
 
-            globalArray.append(regionalXarray)
+            globalArray.append(regionalArray)
 
     globalArray = xr.merge(globalArray)
     logging.info('successful combo of arrays')
