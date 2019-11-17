@@ -64,7 +64,7 @@ def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
 
     Returned_Vals = dask.compute(*Returned_Vals, scheduler='processes', num_workers=5)[0]
 
-    array = xr.open_dataarray(files[-1])
+    array = xr.open_dataset(files[-1])
 
     Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in range(len(Returned_Vals)) if not np.isnan(Returned_Vals[i][0])],
                                     axis=0)
