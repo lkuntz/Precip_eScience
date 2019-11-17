@@ -56,28 +56,25 @@ def process_file(File, latmin, latmax, longmin, longmax):
     except Exception as e:
         logging.info(e)
         logging.info('ERROR in ' + File)
-        return [], [], [], [], [], [], []
+        return [np.nan], [np.nan], [np.nan], [np.nan], [np.nan], [np.nan], [np.nan]
 
 
 def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
-    Returned_Vals = []
-    for File in files:
-        returned_values = dask.delayed(process_file)(File, latmin, latmax, longmin, longmax)
-        Returned_Vals.append(returned_values)
+    Returned_Vals = [dask.delayed(process_file)(File, latmin, latmax, longmin, longmax) for File in files]
 
     Returned_Vals = dask.compute(Returned_Vals)[0]
 
     array = xr.open_dataarray(files[-1])
 
-    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in Returned_Vals if len(Returned_Vals[i][0]) > 0],
+    Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in Returned_Vals if not np.isnan(Returned_Vals[i][0])],
                                     axis=0)
-    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in Returned_Vals if len(Returned_Vals[i][1]) > 0],
+    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in Returned_Vals if not np.isnan(Returned_Vals[i][1])],
                                   axis=0)
-    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in Returned_Vals if len(Returned_Vals[i][2]) > 0])
-    LAT = np.hstack([Returned_Vals[i][3] for i in Returned_Vals if len(Returned_Vals[i][3]) > 0])
-    LONG = np.hstack([Returned_Vals[i][4] for i in Returned_Vals if len(Returned_Vals[i][4]) > 0])
-    TIME = np.hstack([Returned_Vals[i][5] for i in Returned_Vals if len(Returned_Vals[i][5]) > 0])
-    Rain_Type = np.hstack([Returned_Vals[i][6] for i in Returned_Vals if len(Returned_Vals[i][6]) > 0])
+    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in Returned_Vals if not np.isnan(Returned_Vals[i][2])])
+    LAT = np.hstack([Returned_Vals[i][3] for i in Returned_Vals if not np.isnan(Returned_Vals[i][3])])
+    LONG = np.hstack([Returned_Vals[i][4] for i in Returned_Vals if not np.isnan(Returned_Vals[i][4])])
+    TIME = np.hstack([Returned_Vals[i][5] for i in Returned_Vals if not np.isnan(Returned_Vals[i][5])])
+    Rain_Type = np.hstack([Returned_Vals[i][6] for i in Returned_Vals if not np.isnan(Returned_Vals[i][6])])
 
     regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
@@ -582,8 +579,10 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--year')
     args = parser.parse_args()
     year = int(args.year)
-    for month in range(1,13):
-        logging.info("In Month: %s", (month))
-        main_script(year,month)
+    # for month in range(1,13):
+    #     logging.info("In Month: %s", (month))
+    #     main_script(year,month)
+    month = 8
+    main_script(year, month)
     print("Done")
     print("--- %s seconds ---" % (time.time() - start_time))
