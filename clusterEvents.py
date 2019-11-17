@@ -60,7 +60,10 @@ def process_file(File, latmin, latmax, longmin, longmax):
 
 
 def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
-    Returned_Vals = [dask.delayed(process_file)(File, latmin, latmax, longmin, longmax) for File in files]
+    Returned_Vals = []
+    for File in files:
+        vals = dask.delayed(process_file)(File, latmin, latmax, longmin, longmax)
+        Returned_Vals = Returned_Vals.append(vals)
 
     Returned_Vals = dask.compute(*Returned_Vals, scheduler='processes', num_workers=5)[0]
 
@@ -68,13 +71,13 @@ def extract_regionalData(files, latmin, latmax, longmin, longmax, runningNum):
 
     Latent_Heating = np.concatenate([Returned_Vals[i][0] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999],
                                     axis=0)
-    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][1]) > 0],
+    corr_Zfactor = np.concatenate([Returned_Vals[i][1] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999],
                                   axis=0)
-    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][2]) > 0])
-    LAT = np.hstack([Returned_Vals[i][3] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][3]) > 0])
-    LONG = np.hstack([Returned_Vals[i][4] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][4]) > 0])
-    TIME = np.hstack([Returned_Vals[i][5] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][5]) > 0])
-    Rain_Type = np.hstack([Returned_Vals[i][6] for i in range(len(Returned_Vals)) if len(Returned_Vals[i][6]) > 0])
+    SURF_RAIN = np.hstack([Returned_Vals[i][2] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999])
+    LAT = np.hstack([Returned_Vals[i][3] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999])
+    LONG = np.hstack([Returned_Vals[i][4] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999])
+    TIME = np.hstack([Returned_Vals[i][5] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999])
+    Rain_Type = np.hstack([Returned_Vals[i][6] for i in range(len(Returned_Vals)) if not Returned_Vals[i][0] == -9999])
 
     regionalXarray = xr.Dataset({'surf_rain': (['clusteredCoords'], SURF_RAIN),
                                 'latent_heating': (['clusteredCoords','altitude_lh'], Latent_Heating),
