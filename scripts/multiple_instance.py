@@ -34,12 +34,12 @@ def load_creds():
 
 
 class Multi_instance(object):
-    def __init__(self, year, shared_list, instance_type = 'spot'):
+    def __init__(self, year, month, shared_list, instance_type = 'spot'):
         self.CMD_0 = "source /home/ubuntu/miniconda3/bin/activate precip_test"
         self.CMD_DASK = "/home/ubuntu/miniconda3/bin/conda install -y dask"
         self.CMD_DISTRIBUTE = "/home/ubuntu/miniconda3/bin/conda install -y dask distributed"
         self.CMD_1 = "wget -O /home/ubuntu/precip/Precip_eScience/clusterEvents.py https://raw.githubusercontent.com/lkuntz/Precip_eScience/master/clusterEvents.py"
-        self.CMD_2 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {}".format(year)
+        self.CMD_2 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {} -m {}".format(year, month)
         self.KEY = paramiko.RSAKey.from_private_key_file('winter19_incubator.pem')
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -59,6 +59,7 @@ class Multi_instance(object):
         self.SPOT_PRICE = '0.95'
         self.AVAILABILITYZONE = "us-west-2a"
         self.YEAR = year
+        self.MONTH = month
         self.SPINNED_INSTANCE = None
 
     def instance_type_check(self):
@@ -118,7 +119,7 @@ class Multi_instance(object):
                 self.SPINNED_INSTANCE = ec2.Instance(get_response['SpotInstanceRequests'][0]["InstanceId"])
                 shared_list.append(self.SPINNED_INSTANCE.id)
             except Exception as err:
-               print('Following month {} run failed, error message:'.format(self.YEAR), err)
+               print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
 
 
     def run_commands(self):
@@ -145,12 +146,12 @@ class Multi_instance(object):
             self.client.close()
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
         except Exception as err:
-            print('Following month {} run failed, error message:'.format(self.YEAR), err)
+            print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
 
 
 def _multiprocess_handler(year):
-    batch_job = Multi_instance(int(year[0]), year[1])
+    batch_job = Multi_instance(int(year[0][0]),int(year[0][1]) ,year[1])
     batch_job.load_creds()
     batch_job.spin_instance()
     batch_job.run_commands()
@@ -160,7 +161,9 @@ if __name__ == '__main__':
     manager = SyncManager()
     manager.start(mgr_init)  #fire up the child manager process
     shared_list = manager.list()
-    years = [(str(i).zfill(4), shared_list) for i in range(1998, 2000)]
+    year_month = [('2000','01'), ('2000','02')]
+    years = [(i, shared_list) for i in year_month]
+    #years = [(str(i).zfill(4), shared_list) for i in range(1998, 2000)]
     process = 2
     process = multiprocessing.cpu_count() if process > multiprocessing.cpu_count() else process
     chunks = len(years)//process if len(years) > process else 1
