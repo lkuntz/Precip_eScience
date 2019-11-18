@@ -350,8 +350,8 @@ def data_to_cluster(stackedArray):
     return Xdata
 
 def cluster_and_label_data(Distance,eps,min_samps):
-    client = Client(processes=False, n_workers=5)
-    model = DBSCAN(eps=eps, min_samples=min_samps,metric=distance_sphere_and_time)
+    client = Client(processes=False, n_workers=8)
+    model = DBSCAN(eps=eps, min_samples=min_samps,metric=distance_sphere_and_time, n_jobs=-1)
     with parallel_backend('dask'):
         model.fit(Distance)
 
