@@ -51,7 +51,7 @@ class Multi_instance(object):
         self.SECURITY_GROUP_NAME = ['']
         self.KEY_NAME = 'winter19_incubator'
         self.TAG_DELIMITER = '-'
-        self.TAG_NAME = {"Key": "Name", "Value": 'Shiv_Incubator19{}{}{}'.format(self.TAG_DELIMITER,year,month)}
+        self.TAG_NAME = {"Key": "Name", "Value": 'Shiv_Incubator19{}{}{}{}'.format(self.TAG_DELIMITER,year,self.TAG_DELIMITER,month)}
         self.REGION = "us-west-2"
         self.CREDS_DATA = {}
         self.CLEANUP_TIME = 30
