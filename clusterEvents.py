@@ -8,7 +8,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.externals.joblib import parallel_backend
 from sklearn import metrics
 from sklearn.metrics import pairwise_distances, davies_bouldin_score
-from bayes_opt import BayesianOptimization
+#from bayes_opt import BayesianOptimization
 import math
 import boto3
 import os
@@ -350,7 +350,7 @@ def data_to_cluster(stackedArray):
     return Xdata
 
 def cluster_and_label_data(Distance,eps,min_samps):
-    client = Client(processes=False, n_workers=8)
+    client = Client()
     model = DBSCAN(eps=eps, min_samples=min_samps,metric=distance_sphere_and_time, n_jobs=-1)
     with parallel_backend('dask'):
         model.fit(Distance)
@@ -586,10 +586,9 @@ if __name__ == '__main__':
     parser.add_argument('-y', '--year')
     args = parser.parse_args()
     year = int(args.year)
-    # for month in range(1,13):
-    #     logging.info("In Month: %s", (month))
-    #     main_script(year,month)
-    month = 8
+    for month in range(1,13):
+        logging.info("In Month: %s", (month))
+        main_script(year,month)
     main_script(year, month)
     print("Done")
     print("--- %s seconds ---" % (time.time() - start_time))
