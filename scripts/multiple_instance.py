@@ -140,7 +140,6 @@ class Multi_instance(object):
                    print ("Done Executing: ", command)
                 else:
                    print("Stdout output is: ", stdout.read())
-                   print("Error occured is: ", stderr.read())
                    print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), stderr.read())
 
             print("Executed all of the commands. Now will exit \n")
