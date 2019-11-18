@@ -36,6 +36,8 @@ def load_creds():
 class Multi_instance(object):
     def __init__(self, year, shared_list, instance_type = 'spot'):
         self.CMD_0 = "source /home/ubuntu/miniconda3/bin/activate precip_test"
+        self.CMD_DASK = "/home/ubuntu/miniconda3/bin/conda install -y dask"
+        self.CMD_DISTRIBUTE = "/home/ubuntu/miniconda3/bin/conda install -y dask distributed"
         self.CMD_1 = "wget -O /home/ubuntu/precip/Precip_eScience/clusterEvents.py https://raw.githubusercontent.com/lkuntz/Precip_eScience/master/clusterEvents.py"
         self.CMD_2 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {}".format(year)
         self.KEY = paramiko.RSAKey.from_private_key_file('winter19_incubator.pem')
@@ -44,7 +46,7 @@ class Multi_instance(object):
         self.AMI = ""
         self.MIN_COUNT = 1
         self.MAX_COUNT = 1
-        self.INSTANCE_TYPE = "t2.2xlarge"
+        self.INSTANCE_TYPE = ""
         self.SECURITY_GROUP = []
         self.SECURITY_GROUP_NAME = ['']
         self.KEY_NAME = 'winter19_incubator'
@@ -127,9 +129,10 @@ class Multi_instance(object):
             print("The instance now has a status of 'ok'!")
             self.SPINNED_INSTANCE.load()
             self.client.connect(hostname=self.SPINNED_INSTANCE.public_dns_name, username="ubuntu", pkey=self.KEY)
-            cmd = [self.CMD_0, self.CMD_1, self.CMD_2]
+            cmd = [self.CMD_0, self.CMD_DASK, self.CMD_DISTRIBUTE, self.CMD_1, self.CMD_2]
             channel = self.client.invoke_shell()
             for command in cmd:
+                print(command)
                 stdin, stdout, stderr = self.client.exec_command(command)
                 exit_status = stdout.channel.recv_exit_status()          # Blocking call
                 if exit_status == 0:
