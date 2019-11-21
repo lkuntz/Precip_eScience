@@ -38,8 +38,14 @@ def main(instance_tag_name, region):
                 name = tag['Value']
                 instance_id.append(instance.id)
     for instance_kill in instance_id:
+        instance_class = ec2.Instance(instance_kill)
+        instance_volumne = instance_class.volumes.all()
         ec2.instances.filter(InstanceIds=[instance_kill]).terminate()
         logging.info("Terminated instace ID: %s", instance_kill)
+        for vol in instance_volumne:
+            v = ec2.Volume(vol.id)
+            print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
+            v.delete()
     logging.info("Number of terminated instances: %s", len(instance_id))
 
 if __name__ == '__main__':
