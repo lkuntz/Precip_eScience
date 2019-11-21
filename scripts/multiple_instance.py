@@ -61,6 +61,7 @@ class Multi_instance(object):
         self.YEAR = year
         self.MONTH = month
         self.SPINNED_INSTANCE = None
+        self.SPINNED_VOLUME = None
 
     def instance_type_check(self):
         valid_instance = {'spot', 'reserved'}
@@ -78,9 +79,9 @@ class Multi_instance(object):
 
     def spin_instance(self):
         self.SESSION = boto3.Session(aws_access_key_id=self.CREDS_DATA['key_id'],aws_secret_access_key=self.CREDS_DATA['key_access'])
-        self.ec2 = self.SESSION.resource('ec2',region_name=self.REGION)
+        self.ec2 = self.SESSION.resource('ec2', aws_access_key_id=self.CREDS_DATA['key_id'], aws_secret_access_key=self.CREDS_DATA['key_access'],region_name= self.REGION)
         if self.instance_type == 'reserved':
-            instances = ec2.create_instances(ImageId= self.AMI, MinCount= self.MIN_COUNT, MaxCount= self.MAX_COUNT,
+            instances = self.ec2.create_instances(ImageId= self.AMI, MinCount= self.MIN_COUNT, MaxCount= self.MAX_COUNT,
                                             InstanceType= self.INSTANCE_TYPE, SecurityGroupIds=self.SECURITY_GROUP,
                                             KeyName= self.KEY_NAME,
                                             TagSpecifications=[{'ResourceType': 'instance','Tags': [self.TAG_NAME]}])
@@ -115,8 +116,9 @@ class Multi_instance(object):
                     Resources = [get_response['SpotInstanceRequests'][0]["InstanceId"]],
                     Tags= mytags
                 )
-                ec2 = boto3.resource('ec2', aws_access_key_id=self.CREDS_DATA['key_id'], aws_secret_access_key=self.CREDS_DATA['key_access'],region_name= self.REGION)
-                self.SPINNED_INSTANCE = ec2.Instance(get_response['SpotInstanceRequests'][0]["InstanceId"])
+                #ec2 = boto3.resource('ec2', aws_access_key_id=self.CREDS_DATA['key_id'], aws_secret_access_key=self.CREDS_DATA['key_access'],region_name= self.REGION)
+                self.SPINNED_INSTANCE = self.ec2.Instance(get_response['SpotInstanceRequests'][0]["InstanceId"])
+                self.SPINNED_VOLUME = self.SPINNED_INSTANCE.volumes.all()
                 shared_list.append(self.SPINNED_INSTANCE.id)
             except Exception as err:
                print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
@@ -145,9 +147,18 @@ class Multi_instance(object):
             print("Executed all of the commands. Now will exit \n")
             self.client.close()
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
+            for vol in self.SPINNED_VOLUME:
+                v = ec2.Volume(vol.id)
+                print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
+                v.delete()
+            
         except Exception as err:
             print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
+            for vol in self.SPINNED_VOLUME:
+                v = ec2.Volume(vol.id)
+                print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
+                v.delete()
 
 
 def _multiprocess_handler(year):
