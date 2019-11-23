@@ -81,8 +81,7 @@ class Multi_instance(object):
         self.SESSION = boto3.Session(aws_access_key_id=self.CREDS_DATA['key_id'],aws_secret_access_key=self.CREDS_DATA['key_access'])
         self.ec2 = self.SESSION.resource('ec2', aws_access_key_id=self.CREDS_DATA['key_id'], aws_secret_access_key=self.CREDS_DATA['key_access'],region_name= self.REGION)
         if self.instance_type == 'reserved':
-            instances = self.ec2.create_instances(ImageId= self.AMI, MinCount= self.MIN_COUNT, MaxCount= self.MAX_COUNT,
-                                            InstanceType= self.INSTANCE_TYPE, SecurityGroupIds=self.SECURITY_GROUP,
+            instances = self.ec2.create_instances(ImageId= self.AMI, MinCount= self.MIN_COUNT, MaxCount= self.MAX_COUNT,                                            InstanceType= self.INSTANCE_TYPE, SecurityGroupIds=self.SECURITY_GROUP,
                                             KeyName= self.KEY_NAME,
                                             TagSpecifications=[{'ResourceType': 'instance','Tags': [self.TAG_NAME]}])
             self.SPINNED_INSTANCE = instances[0]
@@ -118,15 +117,17 @@ class Multi_instance(object):
                 )
                 #ec2 = boto3.resource('ec2', aws_access_key_id=self.CREDS_DATA['key_id'], aws_secret_access_key=self.CREDS_DATA['key_access'],region_name= self.REGION)
                 self.SPINNED_INSTANCE = self.ec2.Instance(get_response['SpotInstanceRequests'][0]["InstanceId"])
-                self.SPINNED_VOLUME = self.SPINNED_INSTANCE.volumes.all()
+                mapping = self.SPINNED_INSTANCE.block_device_mappings
+                self.devices = {m["DeviceName"]: m["Ebs"]["VolumeId"] for m in mapping}
                 shared_list.append(self.SPINNED_INSTANCE.id)
             except Exception as err:
                print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
 
 
     def run_commands(self):
+        vol_device_name, vol_id = self.devices.popitem()
+        ec2_client = self.SESSION.client('ec2',region_name=self.REGION)
         try:
-            ec2_client = self.SESSION.client('ec2',region_name=self.REGION)
             waiter = ec2_client.get_waiter('instance_status_ok')
             waiter.wait(InstanceIds=[self.SPINNED_INSTANCE.id])
             print("The instance now has a status of 'ok'!")
@@ -142,23 +143,30 @@ class Multi_instance(object):
                    print ("Done Executing: ", command)
                 else:
                    print("Stdout output is: ", stdout.read())
-                   print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), stderr.read())
-
+                   print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH),
+                   stderr.read())
             print("Executed all of the commands. Now will exit \n")
             self.client.close()
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
-            for vol in self.SPINNED_VOLUME:
-                v = self.ec2.Volume(vol.id)
-                print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
-                v.delete()
-            
+            waiter = ec2_client.get_waiter('instance_terminated')
+            waiter.wait(InstanceIds=[self.SPINNED_INSTANCE.id])
+            print("The instance now has been deleted!!")
+            v = self.ec2.Volume(vol_id)
+            print(v.id)
+            ec2_client.get_waiter('volume_available').wait(VolumeIds=[v.id])
+            print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
+            v.delete()
         except Exception as err:
             print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
-            for vol in self.SPINNED_VOLUME:
-                v = self.ec2.Volume(vol.id)
-                print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
-                v.delete()
+            waiter = ec2_client.get_waiter('instance_terminated')
+            waiter.wait(InstanceIds=[self.SPINNED_INSTANCE.id])
+            print("The instance now has been deleted!!")
+            v = self.ec2.Volume(vol_id)
+            print(v.id)
+            ec2_client.get_waiter('volume_available').wait(VolumeIds=[v.id])
+            print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
+            v.delete()
 
 
 def _multiprocess_handler(year):
