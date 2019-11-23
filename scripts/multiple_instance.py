@@ -148,7 +148,7 @@ class Multi_instance(object):
             self.client.close()
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
             for vol in self.SPINNED_VOLUME:
-                v = ec2.Volume(vol.id)
+                v = self.ec2.Volume(vol.id)
                 print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
                 v.delete()
             
@@ -156,7 +156,7 @@ class Multi_instance(object):
             print('Following year {} month {} run failed, error message:'.format(self.YEAR, self.MONTH), err)
             self.ec2.instances.filter(InstanceIds=[self.SPINNED_INSTANCE.id]).terminate()
             for vol in self.SPINNED_VOLUME:
-                v = ec2.Volume(vol.id)
+                v = self.ec2.Volume(vol.id)
                 print("Deleting EBS volume: {}, Size: {} GiB".format(v.id, v.size))
                 v.delete()
 
