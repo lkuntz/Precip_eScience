@@ -249,7 +249,7 @@ def download_s3_data(year,month):
                 delayed_downloads.append(dask.delayed(bucket_download)(
                     bucket, obj.key, os.path.join(home,'data/Trmm/'+obj.key)))
 
-        dask.compute(*delayed_downloads)
+        dask.compute(*delayed_downloads, scheduler='processes', num_workers=4)
 
         #download previous month of data
         year_prev = year
@@ -269,7 +269,7 @@ def download_s3_data(year,month):
                         bucket, obj.key, os.path.join(
                             os.path.join(home,'data/Trmm/'+region+'/'+filename, obj.key[17:]))))
 
-            dask.compute(*delayed_downloads)
+            dask.compute(*delayed_downloads, scheduler='processes', num_workers=4)
 
         #download  next month of data
         year_next = year
@@ -287,7 +287,7 @@ def download_s3_data(year,month):
                 if obj.key[-4:] == ".nc4":
                     delayed_downloads.append(dask.delayed(bucket_download)(
                         bucket, obj.key, os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
-            dask.compute(*delayed_downloads)
+            dask.compute(*delayed_downloads, scheduler='processes', num_workers=4)
     return
     
 #Translate the time into delta time since the first datapoint (in hours)
