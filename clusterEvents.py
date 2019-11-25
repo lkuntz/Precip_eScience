@@ -194,24 +194,6 @@ def read_TRMM_data(year,month):
 
     globalArray = xr.merge(globalArray)
     logging.info('successful combo of arrays')
-    #save as a netcdf
-    globalArray.to_netcdf(path = filename+"Clustered_Data_Globe_test_AllTRMMData.nc4", compute = True)
-    
-    home = expanduser("~")
-
-    with open(os.path.join(home,'creds.json')) as creds_file:
-        creds_data = json.load(creds_file)
-
-    #Access from S3
-    s3 = boto3.resource('s3',aws_access_key_id=creds_data['key_id'],
-             aws_secret_access_key=creds_data['key_access'],region_name='us-west-2')
-    bucket = s3.Bucket('trmm')
-    home = os.getcwd()
-    
-    bucket.upload_file(filename+"Clustered_Data_Globe_test_AllTRMMData.nc4",'trmm/'+filename+"Clustered_Data_Globe_test_AllTRMMData.nc4")
-
-    os.remove(filename+"Clustered_Data_Globe_test_AllTRMMData.nc4")
-    #globalArray = xr.auto_combine(globalArray,concat_dim='clusteredCoords')
 
     return globalArray
 
