@@ -34,6 +34,7 @@ def process_file(File, latmin, latmax, longmin, longmax):
         regionalXarray = xr.open_dataset(File)
         Surf_Rain = regionalXarray.surf_rain.values.flatten()
         Surf_Rain = np.nan_to_num(Surf_Rain)
+        print(Surf_Rain.dtype)
         [Lat, Time, Long] = np.meshgrid(regionalXarray.latitude.values, regionalXarray.time.values,
                                         regionalXarray.longitude.values)
         Lat = Lat.flatten()
@@ -231,7 +232,7 @@ def download_s3_data(year,month):
                 delayed_downloads.append(dask.delayed(bucket_download)(
                     bucket, obj.key, os.path.join(home,'data/Trmm/'+obj.key)))
 
-        dask.compute(*delayed_downloads, scheduler='threads', num_workers=1)
+        dask.compute(*delayed_downloads, scheduler='threads', num_workers=8)
 
         #download previous month of data
         year_prev = year
@@ -251,7 +252,7 @@ def download_s3_data(year,month):
                         bucket, obj.key, os.path.join(
                             os.path.join(home,'data/Trmm/'+region+'/'+filename, obj.key[17:]))))
 
-            dask.compute(*delayed_downloads, scheduler='threads', num_workers=1)
+            dask.compute(*delayed_downloads, scheduler='threads', num_workers=8)
 
         #download  next month of data
         year_next = year
@@ -269,7 +270,7 @@ def download_s3_data(year,month):
                 if obj.key[-4:] == ".nc4":
                     delayed_downloads.append(dask.delayed(bucket_download)(
                         bucket, obj.key, os.path.join(home,'data/Trmm/'+region+'/'+filename,obj.key[17:])))
-            dask.compute(*delayed_downloads, scheduler='threads', num_workers=1)
+            dask.compute(*delayed_downloads, scheduler='threads', num_workers=8)
     return
     
 #Translate the time into delta time since the first datapoint (in hours)

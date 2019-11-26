@@ -38,6 +38,7 @@ class Multi_instance(object):
         self.CMD_0 = "source /home/ubuntu/miniconda3/bin/activate precip_test"
         self.CMD_DASK = "/home/ubuntu/miniconda3/bin/conda install -y dask"
         self.CMD_DISTRIBUTE = "/home/ubuntu/miniconda3/bin/conda install -y dask distributed"
+        self.CMD_UPDATE = "/home/ubuntu/miniconda3/bin/conda update -y xarray"
         self.CMD_1 = "wget -O /home/ubuntu/precip/Precip_eScience/clusterEvents.py https://raw.githubusercontent.com/lkuntz/Precip_eScience/master/clusterEvents.py"
         self.CMD_2 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {} -m {}".format(year, month)
         self.KEY = paramiko.RSAKey.from_private_key_file('winter19_incubator.pem')
