@@ -134,7 +134,7 @@ class Multi_instance(object):
             print("The instance now has a status of 'ok'!")
             self.SPINNED_INSTANCE.load()
             self.client.connect(hostname=self.SPINNED_INSTANCE.public_dns_name, username="ubuntu", pkey=self.KEY)
-            cmd = [self.CMD_0, self.CMD_DASK, self.CMD_DISTRIBUTE, self.CMD_1, self.CMD_2]
+            cmd = [self.CMD_0, self.CMD_DASK, self.CMD_DISTRIBUTE, self.CMD_UPDATE, self.CMD_1, self.CMD_2]
             channel = self.client.invoke_shell()
             for command in cmd:
                 print(command)
