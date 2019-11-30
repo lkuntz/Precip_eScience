@@ -34,7 +34,6 @@ def process_file(File, latmin, latmax, longmin, longmax):
         regionalXarray = xr.open_dataset(File)
         Surf_Rain = regionalXarray.surf_rain.values.flatten()
         Surf_Rain = np.nan_to_num(Surf_Rain)
-        print(Surf_Rain.dtype)
         [Lat, Time, Long] = np.meshgrid(regionalXarray.latitude.values, regionalXarray.time.values,
                                         regionalXarray.longitude.values)
         Lat = Lat.flatten()
@@ -159,16 +158,19 @@ def read_TRMM_data(year,month):
             filename = str(year_prev)+"_"+str(month_prev).zfill(2)
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
-            indices = np.squeeze(np.argwhere(days>np.max(days)-1))
-            F = files[:len(indices)]
-            for ind in range(len(indices)):
-                F[ind] = files[int(indices[ind])]
-            files = F
+            try:
+                indices = np.squeeze(np.argwhere(days>np.max(days)-1))
+                F = files[:len(indices)]
+                for ind in range(len(indices)):
+                    F[ind] = files[int(indices[ind])]
+                files = F
 
-            regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
-                                                             longmin[r], longmax[r], runningNum)
+                regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
+                                                                 longmin[r], longmax[r], runningNum)
 
-            globalArray.append(regionalArray)
+                globalArray.append(regionalArray)
+            except Exception as err:
+               print('Following region {} month {} issue, error message:'.format(region, month_prev), err)
 
         #Load in next day of data
         year_next = year
@@ -181,17 +183,20 @@ def read_TRMM_data(year,month):
             filename = str(year_next)+"_"+str(month_next).zfill(2)
             files = glob.glob("data/Trmm/"+region+"/"+filename+"/*.nc4")
             days = [int(f[-17:-15]) for f in files]
-            indices = np.argwhere(days<np.min(days)+1)
-            
-            F = files[:len(indices)]
-            for ind in range(len(indices)):
-                F[ind] = files[int(indices[ind])]
-            files = F
+            try:
+                indices = np.argwhere(days<np.min(days)+1)
+                
+                F = files[:len(indices)]
+                for ind in range(len(indices)):
+                    F[ind] = files[int(indices[ind])]
+                files = F
 
-            regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
-                                                             longmin[r], longmax[r], runningNum)
+                regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
+                                                                 longmin[r], longmax[r], runningNum)
 
-            globalArray.append(regionalArray)
+                globalArray.append(regionalArray)
+            except Exception as err:
+               print('Following region {} month {} issue, error message:'.format(region, month_next), err)
 
     globalArray = xr.merge(globalArray)
     logging.info('successful combo of arrays')
