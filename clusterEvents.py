@@ -143,9 +143,10 @@ def read_TRMM_data(year,month):
         region = regionNames[r]
         filename = str(year)+"_"+str(month).zfill(2)
         files = glob.glob("data/Trmm/" + region + '/' + filename + "/*.nc4")
-        regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
-                                                         longmin[r], longmax[r], runningNum)
-        globalArray.append(regionalArray)
+        if len(files)>0:
+            regionalArray, runningNum = extract_regionalData(files, latmin[r], latmax[r],
+                                                             longmin[r], longmax[r], runningNum)
+            globalArray.append(regionalArray)
 
         #Load in previous day of data
         year_prev = year
