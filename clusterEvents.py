@@ -553,7 +553,7 @@ def main_script(year, month):
     SR_minrate = 2 #only keep data with rainrate greater than this value
     opt_frac = .5 #fraction of data to use when determining the optimal dbscan parameters
     Rad_Earth = 6371 #km earth's radius
-    MesoScale = 50 #Mesoscale is up to a few hundred km'
+    MesoScale = 6 #Mesoscale is up to a few hundred km'
     FrontSpeed = 30 # km/h speed at which a front often moves
     filename = str(year)+"_"+str(month).zfill(2)
     download_s3_data(year,month)
