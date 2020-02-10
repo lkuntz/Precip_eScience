@@ -36,11 +36,9 @@ def load_creds():
 class Multi_instance(object):
     def __init__(self, year, month, shared_list, instance_type = 'spot'):
         self.CMD_0 = "source /home/ubuntu/miniconda3/bin/activate precip_test"
-        self.CMD_DASK = "/home/ubuntu/miniconda3/bin/conda install -y dask"
-        self.CMD_DISTRIBUTE = "/home/ubuntu/miniconda3/bin/conda install -y dask distributed"
-        self.CMD_UPDATE = "/home/ubuntu/miniconda3/bin/conda update -y xarray"
+        self.REQUIREMENTS = "/home/ubuntu/miniconda3/envs/precip_test/bin/pip install -r /home/ubuntu/precip/Precip_eScience/scripts/requirements.txt"
         self.CMD_1 = "wget -O /home/ubuntu/precip/Precip_eScience/clusterEvents.py https://raw.githubusercontent.com/lkuntz/Precip_eScience/master/clusterEvents.py"
-        self.CMD_2 = "/home/ubuntu/miniconda3/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {} -m {}".format(year, month)
+        self.CMD_2 = "/home/ubuntu/miniconda3/envs/precip_test/bin/python /home/ubuntu/precip/Precip_eScience/clusterEvents.py -y {} -m {}".format(year, month)
         self.KEY = paramiko.RSAKey.from_private_key_file('winter19_incubator.pem')
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -134,7 +132,7 @@ class Multi_instance(object):
             print("The instance now has a status of 'ok'!")
             self.SPINNED_INSTANCE.load()
             self.client.connect(hostname=self.SPINNED_INSTANCE.public_dns_name, username="ubuntu", pkey=self.KEY)
-            cmd = [self.CMD_0, self.CMD_DASK, self.CMD_DISTRIBUTE, self.CMD_UPDATE, self.CMD_1, self.CMD_2]
+            cmd = [self.CMD_0,self.REQUIREMENTS, self.CMD_1, self.CMD_2]
             channel = self.client.invoke_shell()
             for command in cmd:
                 print(command)
